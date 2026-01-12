@@ -61,7 +61,7 @@ func (cr ClientController) GetAll(c *gin.Context) {
 
 func (cr ClientController) Create(c *gin.Context) {
 	var input request.ClientRequestCreate
-	if err := c.ShouldBindJSON(&input); err != nil {
+	if err := c.ShouldBind(&input); err != nil {
 		share.RespondError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -86,7 +86,7 @@ func (cr ClientController) Update(c *gin.Context) {
 		return
 	}
 	var input request.ClientRequestUpdate
-	if err := c.ShouldBindJSON(&input); err != nil {
+	if err := c.ShouldBind(&input); err != nil {
 		share.RespondError(c, http.StatusBadRequest, err.Error())
 		return
 	}

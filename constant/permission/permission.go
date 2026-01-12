@@ -15,4 +15,22 @@ const (
 	AddPermissionToRole      = "add-permission-to-role"
 	RemovePermissionFromRole = "remove-permission-from-role"
 	ViewRolePermission       = "view-role-permission"
+
+	ViewClient         = "view-client"
+	AddClient          = "add-client"
+	EditClient         = "edit-client"
+	ChangeStatusClient = "change-status-client"
+
+	ViewLoanProduct = "view-loan-product"
+
+	ViewDocumentType = "view-document-type"
+
+	ViewLoan    = "view-loan"
+	AddLoan     = "add-loan"
+	EditLoan    = "edit-loan"
+	CheckLoan   = "check-loan"
+	ApproveLoan = "approve-loan"
+
+	ViewCashierSession = "view-cashier-session"
+	AddCashiersSession = "add-cashier-session"
 )

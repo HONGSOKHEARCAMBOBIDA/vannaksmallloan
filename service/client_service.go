@@ -73,7 +73,7 @@ func (s *clientservice) Create(input request.ClientRequestCreate, c *gin.Context
 		Name:          input.Name,
 		Gender:        gender,
 		MaritatStatus: input.MaritatStatus,
-		DateofBirth:   input.DateofBirth,
+		DateOfBirth:   input.DateofBirth,
 		Occupation:    input.Occupation,
 		IdCardNumber:  input.IdCardNumber,
 		Phone:         input.Phone,
@@ -82,7 +82,7 @@ func (s *clientservice) Create(input request.ClientRequestCreate, c *gin.Context
 		Longitude:     input.Longitude,
 		ImagePath:     imagePath,
 		Note:          input.Note,
-		Isactive:      true,
+		IsActive:      true,
 		CreateBy:      userID,
 	}
 	if err := tx.Create(&client).Error; err != nil {
@@ -151,7 +151,7 @@ func (s *clientservice) Update(id int, input request.ClientRequestUpdate, c *gin
 	client.Name = input.Name
 	client.Gender = gender
 	client.MaritatStatus = input.MaritatStatus
-	client.DateofBirth = input.DateofBirth
+	client.DateOfBirth = input.DateofBirth
 	client.Occupation = input.Occupation
 	client.IdCardNumber = input.IdCardNumber
 	client.Phone = input.Phone
@@ -210,7 +210,7 @@ func (s *clientservice) GetList(filters map[string]string, pagination request.Pa
 		v.id AS village_id,
 		v.name AS village_name
 	`).
-		Joins("LEFT JOIN users u ON u.id = clients.create_by").
+		Joins("LEFT JOIN users u ON u.id = clients.created_by").
 		Joins("LEFT JOIN villages v ON v.id = clients.village_id").
 		Joins("LEFT JOIN communces c ON c.id = v.communce_id").
 		Joins("LEFT JOIN districts d ON d.id = c.district_id").
@@ -226,6 +226,9 @@ func (s *clientservice) GetList(filters map[string]string, pagination request.Pa
 		return nil, nil, err
 	}
 	totalPages := int(math.Ceil(float64(totalCount) / float64(pagination.PageSize)))
+	for i := range client {
+		client[i].DateofBirth = helper.FormatDate(client[i].DateofBirth)
+	}
 	return client, &model.PaginationMetadata{
 		Page:       pagination.Page,
 		PageSize:   pagination.PageSize,
@@ -242,6 +245,6 @@ func (s *clientservice) ChangeStatusClient(id int) error {
 		return err
 	}
 
-	client.Isactive = !client.Isactive
+	client.IsActive = !client.IsActive
 	return s.db.Save(&client).Error
 }
