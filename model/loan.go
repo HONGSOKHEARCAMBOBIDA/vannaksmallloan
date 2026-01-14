@@ -5,9 +5,10 @@ type Loan struct {
 	ClientID           int     `json:"client_id"`
 	CoID               int     `json:"co_id"`
 	LoanProductID      int     `json:"loan_product_id"`
+	CashierSessionID   int     `json:"cashier_sessions_id" gorm:"column:cashier_sessions_id"`
 	LoanAmount         float32 `json:"loan_amount"`
 	InterestRate       float32 `json:"interest_rate"`
-	ProcessFee         float32 `json:"process_fee"`
+	ProcessFee         float64 `json:"process_fee"`
 	ApproveDate        *string `json:"approve_date"`
 	LoanStartDate      *string `json:"loan_start_date"`
 	LoanEndDate        *string `json:"loan_end_date"`

@@ -88,10 +88,25 @@ func (cr LoanController) ApproveLoan(c *gin.Context) {
 		share.RespondError(c, http.StatusNotFound, err.Error())
 		return
 	}
-	if err := cr.service.CheckLoan(id); err != nil {
+	if err := cr.service.ApproveLoan(id); err != nil {
 		share.RespondError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	share.ResponeSuccess(c, http.StatusOK, "checked success")
+	share.ResponeSuccess(c, http.StatusOK, "approved success")
+
+}
+
+func (cr LoanController) DeleteLoan(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		share.RespondError(c, http.StatusNotFound, err.Error())
+		return
+	}
+	if err := cr.service.DeleteLoan(id); err != nil {
+		share.RespondError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	share.ResponeSuccess(c, http.StatusOK, "deleted success")
 
 }

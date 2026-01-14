@@ -47,5 +47,8 @@ func SetupRoutes(r *gin.Engine) {
 		auth.PUT(route.CheckLoan, middleware.PermissionMiddleware(permission.CheckLoan), loancontroller.CheckLoan)
 		auth.GET(route.ViewLoanforApprove, middleware.PermissionMiddleware(permission.ApproveLoan), loancontroller.GetLoanForApprove)
 		auth.POST(route.AddCashiersSession, middleware.PermissionMiddleware(permission.AddCashiersSession), cashiersesseioncontroller.Create)
+		auth.GET(route.ViewCashierSession, middleware.PermissionMiddleware(permission.ViewCashierSession), cashiersesseioncontroller.Get)
+		auth.PUT(route.ApproveLoan, middleware.PermissionMiddleware(permission.ApproveLoan), loancontroller.ApproveLoan)
+		auth.DELETE(route.DeleteLoan, middleware.PermissionMiddleware(permission.DeleteLoan), loancontroller.DeleteLoan)
 	}
 }

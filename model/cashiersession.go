@@ -11,7 +11,7 @@ type CashierSession struct {
 	EndTime        *time.Time    `json:"end_time"`
 	OpeningBalance float64       `json:"opening_balance"`
 	ClosingBalance *float64      `json:"closing_balance"`
-	TotalReceipts  *float64      `json:"total_receipts"`
+	TotalReceipts  float64       `json:"total_receipts"`
 	Difference     *float64      `json:"difference"`
 	Status         StatusCashier `json:"status"`
 	Notes          *string       `json:"notes"`

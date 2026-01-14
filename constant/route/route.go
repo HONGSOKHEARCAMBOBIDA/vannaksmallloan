@@ -33,6 +33,7 @@ const (
 	EditLoan           = "editloan"
 	CheckLoan          = "checkloan/:id"
 	ApproveLoan        = "approveloan/:id"
+	DeleteLoan         = "deleteloan/:id"
 
 	ViewCashierSession = "viewcashiersession"
 	AddCashiersSession = "addcashiersession"

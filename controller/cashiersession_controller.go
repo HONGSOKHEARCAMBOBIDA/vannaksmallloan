@@ -31,3 +31,19 @@ func (cr CashierSessionController) Create(c *gin.Context) {
 	}
 	share.ResponeSuccess(c, http.StatusOK, "cashier session created")
 }
+
+func (cr CashierSessionController) Get(c *gin.Context) {
+	userID, ok := helper.GetUserID(c)
+	if !ok {
+		share.RespondError(c, http.StatusUnauthorized, "Please Login")
+		return
+	}
+
+	data, err := cr.service.Get(userID)
+	if err != nil {
+		share.RespondError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	share.RespondDate(c, http.StatusOK, data)
+}

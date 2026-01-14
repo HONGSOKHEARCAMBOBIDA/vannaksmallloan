@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"math"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/hearbong/smallloanbackend/model"
 	"github.com/hearbong/smallloanbackend/request"
 	"github.com/hearbong/smallloanbackend/response"
+	"github.com/hearbong/smallloanbackend/utils"
 	"gorm.io/gorm"
 )
 
@@ -17,6 +19,8 @@ type LoanService interface {
 	GetLoanForCheck(userID int) ([]response.LoanResponse, error)
 	GetLoanForApprove(userID int) ([]response.LoanResponse, error)
 	CheckLoan(id int) error
+	ApproveLoan(id int) error
+	DeleteLoan(id int) error
 }
 
 type loanservice struct {
@@ -44,6 +48,11 @@ func (s *loanservice) Create(userID int, input request.LoanRequest) error {
 		tx.Rollback()
 		return err
 	}
+	var cashiersession model.CashierSession
+	if err := tx.Where("user_id =? AND status LIKE ?", userID, "OPEN").First(&cashiersession).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
 	interesAmount := math.Ceil(float64(input.LoanAmount)*float64(loanproduct.InterestRate))/100 + 0.00
 	processfeeamount := math.Ceil(float64(input.LoanAmount)*float64(loanproduct.ProcessFeeRate))/100 + 0.00
 	dailyprinciple := math.Ceil(float64(input.LoanAmount) / float64(loanproduct.TermDay))
@@ -54,9 +63,10 @@ func (s *loanservice) Create(userID int, input request.LoanRequest) error {
 		ClientID:           input.ClientID,
 		CoID:               userID,
 		LoanProductID:      input.LoanProductID,
+		CashierSessionID:   cashiersession.ID,
 		LoanAmount:         input.LoanAmount,
 		InterestRate:       float32(interesAmount),
-		ProcessFee:         float32(processfeeamount),
+		ProcessFee:         float64(processfeeamount),
 		DisbursedDate:      now,
 		DisbursedBy:        userID,
 		DailyPaymentAmount: float32(dailypaymentamount),
@@ -274,4 +284,193 @@ func (s *loanservice) GetLoanForApprove(userID int) ([]response.LoanResponse, er
 		loan[i].DisbursedDate = helper.FormatDate(loan[i].DisbursedDate)
 	}
 	return loan, nil
+}
+
+func (s *loanservice) ApproveLoan(id int) error {
+	tx := s.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+	approvedate := time.Now().Format("2006-01-02")
+	result := tx.Model(&model.Loan{}).Where("id = ?", id).Updates(&model.Loan{
+		Status:      model.Approved,
+		ApproveDate: &approvedate,
+	})
+
+	if result.Error != nil {
+		tx.Rollback()
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		tx.Rollback()
+		return fmt.Errorf("loan not found")
+	}
+
+	var loan model.Loan
+	if err := tx.Where("id = ?", id).First(&loan).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	var loanproduct model.LoanProduct
+	if err := tx.Where("id = ?", loan.LoanProductID).First(&loanproduct).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	receiptNumber := utils.GenerateReceiptNumber()
+	newreceipt := model.Receipt{
+		ReceiptNumber:    receiptNumber,
+		LoanID:           loan.ID,
+		ReceiptDate:      time.Now().Format("2006-01-02"),
+		TotalAmount:      float64(loan.ProcessFee),
+		CashierSessionID: loan.CashierSessionID,
+		ReceiveBy:        loan.DisbursedBy,
+		Notes:            "ទទួលបានពីសេវាកម្ចី",
+	}
+
+	if err := tx.Create(&newreceipt).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	var cashiersession model.CashierSession
+	if err := tx.Where("id = ?", loan.CashierSessionID).First(&cashiersession).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	addTotalReceipts := cashiersession.TotalReceipts + loan.ProcessFee
+	if err := tx.Model(&model.CashierSession{}).Where("id = ?", loan.CashierSessionID).
+		Update("total_receipts", addTotalReceipts).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	currentDate := time.Now().Format("2006-01-02")
+	if err := tx.Model(&model.Loan{}).Where("id = ?", id).
+		Update("loan_start_date", currentDate).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if loan.Duration > 0 {
+		principal := math.Ceil(float64(loan.LoanAmount) / float64(loan.Duration))
+		interest := math.Ceil(float64(loan.InterestRate) / float64(loan.Duration))
+		dueamount := principal + interest
+
+		// Calculate first payment date - TOMORROW (skip weekends if enabled)
+		firstPaymentDate := utils.GetNextBusinessDay(currentDate, loanproduct.SkipWeeken)
+
+		for i := 1; i <= loan.Duration; i++ {
+			var scheduleDate string
+			if i == 1 {
+				scheduleDate = firstPaymentDate
+			} else {
+				daysToAdd := 0
+				switch loanproduct.PaymentFrequency {
+				case "បង់ប្រចាំថ្ងៃ":
+					daysToAdd = 1
+				case "WEEKLY":
+					daysToAdd = 7
+				case "MONTHLY":
+					daysToAdd = 30
+				default:
+					daysToAdd = 1
+				}
+
+				scheduleDate = utils.CalculateNextScheduleDate(firstPaymentDate, i-1, daysToAdd, loanproduct.SkipWeeken)
+			}
+
+			newschedule := model.PaymentSchedule{
+				LoanID:          loan.ID,
+				ScheduleNumber:  i,
+				PaymentDate:     scheduleDate,
+				DueAmount:       dueamount,
+				PrincipalAmount: principal,
+				InterestAmount:  interest,
+				PaidDate:        nil,
+				PrincipalPaid:   nil,
+				InterestPaid:    nil,
+				PenaltyAmount:   loanproduct.LatePenaltyFixed,
+				PenaltyPaid:     nil,
+				PaidAmount:      nil,
+				DayLate:         nil,
+				Status:          model.ScheduelStatus(model.PENDING),
+			}
+
+			if err := tx.Create(&newschedule).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+
+		// Calculate and update loan end date
+		if loan.Duration > 0 {
+			lastScheduleDate := utils.CalculateNextScheduleDate(firstPaymentDate, loan.Duration-1, 1, loanproduct.SkipWeeken)
+			if err := tx.Model(&model.Loan{}).Where("id = ?", id).
+				Update("loan_end_date", lastScheduleDate).Error; err != nil {
+				tx.Rollback()
+				return err
+			}
+		}
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *loanservice) DeleteLoan(id int) error {
+	tx := s.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var loan model.Loan
+	if err := s.db.Where("id =?", id).First(&loan).Error; err != nil {
+		return err
+	}
+
+	if err := tx.Where("loan_id = ?", id).Delete(&model.Receipt{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	var cashiersession model.CashierSession
+	if err := tx.Where("id =?", loan.CashierSessionID).First(&cashiersession).Error; err != nil {
+		return err
+	}
+
+	removeTotalReceipts := cashiersession.TotalReceipts - loan.ProcessFee
+	if err := tx.Model(&model.CashierSession{}).Where("id =?", loan.CashierSessionID).
+		Update("total_receipts", removeTotalReceipts).Error; err != nil {
+		tx.Rollback()
+		return err
+
+	}
+
+	if err := tx.Where("loan_id =?", id).Delete(&model.PaymentSchedule{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := tx.Where("id =?", id).Delete(&model.Loan{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	return nil
+
 }

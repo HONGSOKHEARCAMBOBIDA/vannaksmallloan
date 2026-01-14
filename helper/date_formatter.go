@@ -21,3 +21,19 @@ func FormatDate(dateStr string) string {
 
 	return t.Format("2006-01-02")
 }
+
+func FormatTime(timeStr string) string {
+	if timeStr == "" {
+		return ""
+	}
+
+	t, err := time.Parse(time.RFC3339, timeStr)
+	if err != nil {
+		t, err = time.Parse("2006-01-02 15:04:05", timeStr)
+		if err != nil {
+			return timeStr
+		}
+	}
+
+	return t.Format("15:04:05")
+}

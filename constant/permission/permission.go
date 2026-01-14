@@ -30,6 +30,7 @@ const (
 	EditLoan    = "edit-loan"
 	CheckLoan   = "check-loan"
 	ApproveLoan = "approve-loan"
+	DeleteLoan  = "delete-loan"
 
 	ViewCashierSession = "view-cashier-session"
 	AddCashiersSession = "add-cashier-session"
