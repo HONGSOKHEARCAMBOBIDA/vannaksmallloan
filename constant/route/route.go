@@ -37,4 +37,11 @@ const (
 
 	ViewCashierSession = "viewcashiersession"
 	AddCashiersSession = "addcashiersession"
+
+	ViewAccountType = "viewaccounttype"
+
+	ViewChartAccount         = "viewchartaccount"
+	AddChartAccount          = "addchartaccount"
+	EditChartAccount         = "editchartaccount/:id"
+	ChangestatusChartAccount = "changestatuschartaccount/:id"
 )

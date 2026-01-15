@@ -217,7 +217,7 @@ func (s *clientservice) GetList(filters map[string]string, pagination request.Pa
 		Joins("LEFT JOIN provinces p ON p.id = d.province_id")
 
 	if v, ok := filters["name"]; ok && v != "" {
-		db = db.Where("clients.name LIKE ?", "&"+v+"%")
+		db = db.Where("clients.name LIKE ?", "%"+v+"%")
 	}
 	if err := db.Count(&totalCount).Error; err != nil {
 		return nil, nil, err

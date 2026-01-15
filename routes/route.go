@@ -18,6 +18,8 @@ func SetupRoutes(r *gin.Engine) {
 	documenttypecontroller := controller.NewDocumentTypeController()
 	loancontroller := controller.NewLaonController()
 	cashiersesseioncontroller := controller.NewCashierSessionController()
+	accounttypecontroller := controller.NewAccountTypeController()
+	chartaccountcontroller := controller.NewChartAccountController()
 	r.Static("/clientimage", "./public/clientimage")
 	r.POST("/login", authcontroller.Login)
 	auth := r.Group("/")
@@ -50,5 +52,10 @@ func SetupRoutes(r *gin.Engine) {
 		auth.GET(route.ViewCashierSession, middleware.PermissionMiddleware(permission.ViewCashierSession), cashiersesseioncontroller.Get)
 		auth.PUT(route.ApproveLoan, middleware.PermissionMiddleware(permission.ApproveLoan), loancontroller.ApproveLoan)
 		auth.DELETE(route.DeleteLoan, middleware.PermissionMiddleware(permission.DeleteLoan), loancontroller.DeleteLoan)
+		auth.GET(route.ViewAccountType, middleware.PermissionMiddleware(permission.ViewAccountType), accounttypecontroller.Get)
+		auth.POST(route.AddChartAccount, middleware.PermissionMiddleware(permission.AddChartAccount), chartaccountcontroller.Create)
+		auth.GET(route.ViewChartAccount, middleware.PermissionMiddleware(permission.ViewChartAccount), chartaccountcontroller.Get)
+		auth.PUT(route.EditChartAccount, middleware.PermissionMiddleware(permission.EditChartAccount), chartaccountcontroller.Update)
+		auth.PUT(route.ChangestatusChartAccount, middleware.PermissionMiddleware(permission.ChangestatusChartAccount), chartaccountcontroller.ChangeStatusChartAccount)
 	}
 }
