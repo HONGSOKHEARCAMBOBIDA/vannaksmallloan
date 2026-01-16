@@ -14,6 +14,7 @@ import (
 type CashierSessionService interface {
 	Create(userID int) error
 	Get(userID int) ([]response.CashierSessionResponse, error)
+	Verify(userID int, id int) error
 }
 
 type cashiersessionservice struct {
@@ -99,4 +100,76 @@ func (s *cashiersessionservice) Get(userID int) ([]response.CashierSessionRespon
 		cashiersession[i].StartTime = helper.FormatTime(cashiersession[i].StartTime)
 	}
 	return cashiersession, nil
+}
+
+func (s *cashiersessionservice) Verify(userID int, id int) error {
+	tx := s.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var cs model.CashierSession
+	if err := tx.Where("id = ?", id).First(&cs).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	journalCode := utils.GenerateJournalCode()
+	var totalLoan float64
+	tx.Model(&model.Loan{}).Where("cashier_sessions_id = ?", id).Select("SUM(loan_amount)").Scan(&totalLoan)
+	if err := utils.CreateJournalPair(tx, userID, id, journalCode, 2, 1, totalLoan, "លុយទម្លាក់កម្ចី"); err != nil {
+		tx.Rollback()
+		return err
+	}
+	var totalLoanFee float64
+	tx.Model(&model.Receipt{}).
+		Where("cashier_session_id = ? AND notes LIKE ?", id, "ទទួលបានពីសេវាកម្ចី").
+		Select("SUM(total_amount)").Scan(&totalLoanFee)
+	if err := utils.CreateJournalPair(tx, userID, id, journalCode, 1, 8, totalLoanFee, "ទទួលបានពីសេវាកម្ចី"); err != nil {
+		tx.Rollback()
+		return err
+	}
+	var receipts []model.Receipt
+	tx.Where("cashier_session_id = ?", id).Find(&receipts)
+	receiptIDs := make([]int, len(receipts))
+	for i, r := range receipts {
+		receiptIDs[i] = r.ID
+	}
+	var totalPrincipal, totalInterest, totalPenalty float64
+	if len(receiptIDs) > 0 {
+		tx.Model(&model.ReceiptAllocation{}).Where("receipt_id IN ?", receiptIDs).Select("SUM(principal_amount)").Scan(&totalPrincipal)
+		tx.Model(&model.ReceiptAllocation{}).Where("receipt_id IN ?", receiptIDs).Select("SUM(interest_amount)").Scan(&totalInterest)
+		tx.Model(&model.ReceiptAllocation{}).Where("receipt_id IN ?", receiptIDs).Select("SUM(penalty_amount)").Scan(&totalPenalty)
+	}
+
+	if err := utils.CreateJournalPair(tx, userID, id, journalCode, 1, 2, totalPrincipal, "ប្រាក់ដេីមអតិថិជនបង់ត្រឡប់"); err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := utils.CreateJournalPair(tx, userID, id, journalCode, 1, 7, totalInterest, "ចំណូលពីការប្រាក់"); err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := utils.CreateJournalPair(tx, userID, id, journalCode, 1, 9, totalPenalty, "ចំណូលពីការពិន័យ"); err != nil {
+		tx.Rollback()
+		return err
+	}
+	closingBalance := cs.TotalReceipts
+	difference := closingBalance - cs.OpeningBalance
+	if err := tx.Model(&model.CashierSession{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"closing_balance": closingBalance,
+		"end_time":        time.Now(),
+		"difference":      difference,
+		"status":          model.CLOSED,
+		"verified_by":     userID,
+		"notes":           "បានផ្ទៀងផ្ទាត់",
+		"verified_at":     time.Now(),
+	}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	return tx.Commit().Error
 }

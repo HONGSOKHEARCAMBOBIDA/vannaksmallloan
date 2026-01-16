@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hearbong/smallloanbackend/constant/share"
@@ -46,4 +47,24 @@ func (cr CashierSessionController) Get(c *gin.Context) {
 	}
 
 	share.RespondDate(c, http.StatusOK, data)
+}
+
+func (cr CashierSessionController) Verify(c *gin.Context) {
+	userID, ok := helper.GetUserID(c)
+	if !ok {
+		share.RespondError(c, http.StatusUnauthorized, "Please Login")
+		return
+	}
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		share.RespondError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := cr.service.Verify(userID, id); err != nil {
+		share.RespondError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	share.ResponeSuccess(c, http.StatusOK, "Verify Success")
+
 }

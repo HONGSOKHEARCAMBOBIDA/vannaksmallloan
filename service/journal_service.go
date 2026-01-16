@@ -18,6 +18,7 @@ type JournalService interface {
 	Create(userID int, input request.JournalRequestCreate) error
 	Get(filters map[string]string, pagination request.Pagination) ([]response.JournalResponse, *model.PaginationMetadata, error)
 	Update(id int, input request.JournalRequestUpdate) error
+	Delete(id int) error
 }
 
 type journalservice struct {
@@ -177,4 +178,18 @@ func (s *journalservice) Get(filters map[string]string, pagination request.Pagin
 		HasNext:    pagination.Page < totalPages,
 		HasPrev:    pagination.Page > 1,
 	}, nil
+}
+
+func (s *journalservice) Delete(id int) error {
+	result := s.db.Delete(&model.Journal{}, id)
+
+	if result.Error != nil {
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		return errors.New("journal not found")
+	}
+
+	return nil
 }

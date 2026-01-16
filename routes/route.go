@@ -20,6 +20,7 @@ func SetupRoutes(r *gin.Engine) {
 	cashiersesseioncontroller := controller.NewCashierSessionController()
 	accounttypecontroller := controller.NewAccountTypeController()
 	chartaccountcontroller := controller.NewChartAccountController()
+	journalcontroller := controller.NewJournalController()
 	r.Static("/clientimage", "./public/clientimage")
 	r.POST("/login", authcontroller.Login)
 	auth := r.Group("/")
@@ -50,6 +51,7 @@ func SetupRoutes(r *gin.Engine) {
 		auth.GET(route.ViewLoanforApprove, middleware.PermissionMiddleware(permission.ApproveLoan), loancontroller.GetLoanForApprove)
 		auth.POST(route.AddCashiersSession, middleware.PermissionMiddleware(permission.AddCashiersSession), cashiersesseioncontroller.Create)
 		auth.GET(route.ViewCashierSession, middleware.PermissionMiddleware(permission.ViewCashierSession), cashiersesseioncontroller.Get)
+		auth.PUT(route.VerifyCashierSession, middleware.PermissionMiddleware(permission.VerifyCashierSession), cashiersesseioncontroller.Verify)
 		auth.PUT(route.ApproveLoan, middleware.PermissionMiddleware(permission.ApproveLoan), loancontroller.ApproveLoan)
 		auth.DELETE(route.DeleteLoan, middleware.PermissionMiddleware(permission.DeleteLoan), loancontroller.DeleteLoan)
 		auth.GET(route.ViewAccountType, middleware.PermissionMiddleware(permission.ViewAccountType), accounttypecontroller.Get)
@@ -57,5 +59,9 @@ func SetupRoutes(r *gin.Engine) {
 		auth.GET(route.ViewChartAccount, middleware.PermissionMiddleware(permission.ViewChartAccount), chartaccountcontroller.Get)
 		auth.PUT(route.EditChartAccount, middleware.PermissionMiddleware(permission.EditChartAccount), chartaccountcontroller.Update)
 		auth.PUT(route.ChangestatusChartAccount, middleware.PermissionMiddleware(permission.ChangestatusChartAccount), chartaccountcontroller.ChangeStatusChartAccount)
+		auth.POST(route.AddJournal, middleware.PermissionMiddleware(permission.AddJournal), journalcontroller.Create)
+		auth.GET(route.ViewJournal, middleware.PermissionMiddleware(permission.ViewJournal), journalcontroller.Get)
+		auth.PUT(route.EditJournal, middleware.PermissionMiddleware(permission.EditJournal), journalcontroller.Update)
+		auth.DELETE(route.DeleteJournal, middleware.PermissionMiddleware(permission.DeleteLoan), journalcontroller.Delete)
 	}
 }

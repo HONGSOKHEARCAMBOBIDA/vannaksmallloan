@@ -86,3 +86,17 @@ func (cr JournalController) Update(c *gin.Context) {
 	}
 	share.ResponeSuccess(c, http.StatusOK, "journal updated")
 }
+
+func (cr JournalController) Delete(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		share.RespondError(c, http.StatusUnauthorized, "please login")
+		return
+	}
+	if err := cr.service.Delete(id); err != nil {
+		share.RespondError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	share.ResponeSuccess(c, http.StatusOK, "Journal deleted")
+}

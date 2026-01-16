@@ -32,8 +32,9 @@ const (
 	ApproveLoan = "approve-loan"
 	DeleteLoan  = "delete-loan"
 
-	ViewCashierSession = "view-cashier-session"
-	AddCashiersSession = "add-cashier-session"
+	ViewCashierSession   = "view-cashier-session"
+	AddCashiersSession   = "add-cashier-session"
+	VerifyCashierSession = "verify-session"
 
 	ViewAccountType = "view-accounttype"
 
@@ -41,4 +42,9 @@ const (
 	AddChartAccount          = "add-chartaccount"
 	EditChartAccount         = "edit-chartaccount"
 	ChangestatusChartAccount = "change-status-chartaccount"
+
+	ViewJournal   = "view-journal"
+	AddJournal    = "add-journal"
+	EditJournal   = "edit-journal"
+	DeleteJournal = "delete-journal"
 )
