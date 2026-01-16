@@ -52,6 +52,7 @@ func SetupRoutes(r *gin.Engine) {
 		auth.POST(route.AddCashiersSession, middleware.PermissionMiddleware(permission.AddCashiersSession), cashiersesseioncontroller.Create)
 		auth.GET(route.ViewCashierSession, middleware.PermissionMiddleware(permission.ViewCashierSession), cashiersesseioncontroller.Get)
 		auth.PUT(route.VerifyCashierSession, middleware.PermissionMiddleware(permission.VerifyCashierSession), cashiersesseioncontroller.Verify)
+		auth.DELETE(route.RollbackVerify, middleware.PermissionMiddleware(permission.RollbackVerify), cashiersesseioncontroller.RollbackVerify)
 		auth.PUT(route.ApproveLoan, middleware.PermissionMiddleware(permission.ApproveLoan), loancontroller.ApproveLoan)
 		auth.DELETE(route.DeleteLoan, middleware.PermissionMiddleware(permission.DeleteLoan), loancontroller.DeleteLoan)
 		auth.GET(route.ViewAccountType, middleware.PermissionMiddleware(permission.ViewAccountType), accounttypecontroller.Get)

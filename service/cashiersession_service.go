@@ -15,6 +15,7 @@ type CashierSessionService interface {
 	Create(userID int) error
 	Get(userID int) ([]response.CashierSessionResponse, error)
 	Verify(userID int, id int) error
+	RollbackVerify(id int) error
 }
 
 type cashiersessionservice struct {
@@ -118,7 +119,7 @@ func (s *cashiersessionservice) Verify(userID int, id int) error {
 
 	journalCode := utils.GenerateJournalCode()
 	var totalLoan float64
-	tx.Model(&model.Loan{}).Where("cashier_sessions_id = ?", id).Select("SUM(loan_amount)").Scan(&totalLoan)
+	tx.Model(&model.Loan{}).Where("cashier_sessions_id = ?", id).Select("COALESCE(SUM(loan_amount), 0)").Scan(&totalLoan)
 	if err := utils.CreateJournalPair(tx, userID, id, journalCode, 2, 1, totalLoan, "លុយទម្លាក់កម្ចី"); err != nil {
 		tx.Rollback()
 		return err
@@ -126,7 +127,7 @@ func (s *cashiersessionservice) Verify(userID int, id int) error {
 	var totalLoanFee float64
 	tx.Model(&model.Receipt{}).
 		Where("cashier_session_id = ? AND notes LIKE ?", id, "ទទួលបានពីសេវាកម្ចី").
-		Select("SUM(total_amount)").Scan(&totalLoanFee)
+		Select("COALESCE(SUM(total_amount), 0)").Scan(&totalLoanFee)
 	if err := utils.CreateJournalPair(tx, userID, id, journalCode, 1, 8, totalLoanFee, "ទទួលបានពីសេវាកម្ចី"); err != nil {
 		tx.Rollback()
 		return err
@@ -139,9 +140,9 @@ func (s *cashiersessionservice) Verify(userID int, id int) error {
 	}
 	var totalPrincipal, totalInterest, totalPenalty float64
 	if len(receiptIDs) > 0 {
-		tx.Model(&model.ReceiptAllocation{}).Where("receipt_id IN ?", receiptIDs).Select("SUM(principal_amount)").Scan(&totalPrincipal)
-		tx.Model(&model.ReceiptAllocation{}).Where("receipt_id IN ?", receiptIDs).Select("SUM(interest_amount)").Scan(&totalInterest)
-		tx.Model(&model.ReceiptAllocation{}).Where("receipt_id IN ?", receiptIDs).Select("SUM(penalty_amount)").Scan(&totalPenalty)
+		tx.Model(&model.ReceiptAllocation{}).Where("receipt_id IN ?", receiptIDs).Select("COALESCE(SUM(principal_amount), 0)").Scan(&totalPrincipal)
+		tx.Model(&model.ReceiptAllocation{}).Where("receipt_id IN ?", receiptIDs).Select("COALESCE(SUM(interest_amount), 0)").Scan(&totalInterest)
+		tx.Model(&model.ReceiptAllocation{}).Where("receipt_id IN ?", receiptIDs).Select("COALESCE(SUM(penalty_amount), 0)").Scan(&totalPenalty)
 	}
 
 	if err := utils.CreateJournalPair(tx, userID, id, journalCode, 1, 2, totalPrincipal, "ប្រាក់ដេីមអតិថិជនបង់ត្រឡប់"); err != nil {
@@ -172,4 +173,38 @@ func (s *cashiersessionservice) Verify(userID int, id int) error {
 	}
 
 	return tx.Commit().Error
+}
+
+func (s *cashiersessionservice) RollbackVerify(id int) error {
+	tx := s.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+	var cs model.CashierSession
+	if err := tx.Where("id = ?", id).First(&cs).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if err := tx.Where("reference_id =?", id).Delete(&model.Journal{}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	closingBalance := 0.00
+	difference := 0.00
+	if err := tx.Model(&model.CashierSession{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"closing_balance": closingBalance,
+		"end_time":        nil,
+		"difference":      difference,
+		"status":          model.OPEN,
+		"verified_by":     nil,
+		"notes":           nil,
+		"verified_at":     nil,
+	}).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	return tx.Commit().Error
+
 }

@@ -68,3 +68,18 @@ func (cr CashierSessionController) Verify(c *gin.Context) {
 	share.ResponeSuccess(c, http.StatusOK, "Verify Success")
 
 }
+
+func (cr CashierSessionController) RollbackVerify(c *gin.Context) {
+	idParam := c.Param("id")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		share.RespondError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := cr.service.RollbackVerify(id); err != nil {
+		share.RespondError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	share.ResponeSuccess(c, http.StatusOK, "Rollback Verify Success")
+
+}

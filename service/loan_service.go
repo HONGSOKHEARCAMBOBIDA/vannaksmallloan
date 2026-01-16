@@ -49,7 +49,7 @@ func (s *loanservice) Create(userID int, input request.LoanRequest) error {
 		return err
 	}
 	var cashiersession model.CashierSession
-	if err := tx.Where("user_id =? AND status LIKE ?", userID, "OPEN").First(&cashiersession).Error; err != nil {
+	if err := tx.Where("user_id =? AND status LIKE ?", userID, 1).First(&cashiersession).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
@@ -181,9 +181,16 @@ func (s *loanservice) GetLoanForCheck(userID int) ([]response.LoanResponse, erro
 		Joins("LEFT JOIN users uc ON uc.id = l.check_by_id").
 		Joins("LEFT JOIN users up ON up.id = l.approved_by_id")
 
-	db = db.Where("check_by_id = ? AND status =?", userID, "PENDING")
+	db = db.Where("check_by_id = ? AND status =?", userID, model.Pending)
 	if err := db.Order("l.id DESC").Scan(&loan).Error; err != nil {
 		return nil, err
+	}
+	for i := range loan {
+		loan[i].ClientDoB = helper.FormatDate(loan[i].ClientDoB)
+		loan[i].DisbursedDate = helper.FormatDate(loan[i].DisbursedDate)
+		loan[i].ApproveDate = helper.FormatDate(loan[i].ApproveDate)
+		loan[i].LoanStartDate = helper.FormatDate(loan[i].LoanStartDate)
+		loan[i].LoanEndDate = helper.FormatDate(loan[i].LoanEndDate)
 	}
 	return loan, nil
 }
@@ -275,13 +282,16 @@ func (s *loanservice) GetLoanForApprove(userID int) ([]response.LoanResponse, er
 		Joins("LEFT JOIN users uc ON uc.id = l.check_by_id").
 		Joins("LEFT JOIN users up ON up.id = l.approved_by_id")
 
-	db = db.Where("approved_by_id = ? AND status =?", userID, "CHECKED")
+	db = db.Where("approved_by_id = ? AND status =?", userID, model.Checked)
 	if err := db.Order("l.id DESC").Scan(&loan).Error; err != nil {
 		return nil, err
 	}
 	for i := range loan {
 		loan[i].ClientDoB = helper.FormatDate(loan[i].ClientDoB)
 		loan[i].DisbursedDate = helper.FormatDate(loan[i].DisbursedDate)
+		loan[i].ApproveDate = helper.FormatDate(loan[i].ApproveDate)
+		loan[i].LoanStartDate = helper.FormatDate(loan[i].LoanStartDate)
+		loan[i].LoanEndDate = helper.FormatDate(loan[i].LoanEndDate)
 	}
 	return loan, nil
 }

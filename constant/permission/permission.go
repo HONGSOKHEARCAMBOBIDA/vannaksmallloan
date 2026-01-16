@@ -35,6 +35,7 @@ const (
 	ViewCashierSession   = "view-cashier-session"
 	AddCashiersSession   = "add-cashier-session"
 	VerifyCashierSession = "verify-session"
+	RollbackVerify       = "rollback-verify"
 
 	ViewAccountType = "view-accounttype"
 
