@@ -1,12 +1,12 @@
 package model
 
-type ScheduelStatus int
+type ScheduelStatus string
 
 const (
-	UnknownScheduleStatus ScheduelStatus = iota
-	PENDING
-	PAID
-	PARTIAL
-	OVERDUE
-	CANCELLED
+	UnknownScheduleStatus ScheduelStatus = ""
+	PENDING               ScheduelStatus = "PENDING"
+	PAID                  ScheduelStatus = "PAID"
+	PARTIAL               ScheduelStatus = "PARTIAL"
+	OVERDUE               ScheduelStatus = "OVERDUE"
+	CANCELLED             ScheduelStatus = "CANCELLED"
 )

@@ -48,4 +48,8 @@ const (
 	AddJournal    = "add-journal"
 	EditJournal   = "edit-journal"
 	DeleteJournal = "delete-journal"
+
+	ViewReceipt   = "view-receipt"
+	AddReceipt    = "add-receipt"
+	DeleteReceipt = "delete-receipt"
 )

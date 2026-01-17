@@ -51,4 +51,8 @@ const (
 	AddJournal    = "addjournal"
 	EditJournal   = "editjournal/:id"
 	DeleteJournal = "deletejournal/:id"
+
+	ViewReceipt   = "viewreceipt"
+	AddReceipt    = "addreceipt/:id"
+	DeleteReceipt = "deletereceipt/:id"
 )

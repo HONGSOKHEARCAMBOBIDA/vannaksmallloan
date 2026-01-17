@@ -21,6 +21,7 @@ func SetupRoutes(r *gin.Engine) {
 	accounttypecontroller := controller.NewAccountTypeController()
 	chartaccountcontroller := controller.NewChartAccountController()
 	journalcontroller := controller.NewJournalController()
+	receiptcontroller := controller.NewReceiptController()
 	r.Static("/clientimage", "./public/clientimage")
 	r.POST("/login", authcontroller.Login)
 	auth := r.Group("/")
@@ -64,5 +65,7 @@ func SetupRoutes(r *gin.Engine) {
 		auth.GET(route.ViewJournal, middleware.PermissionMiddleware(permission.ViewJournal), journalcontroller.Get)
 		auth.PUT(route.EditJournal, middleware.PermissionMiddleware(permission.EditJournal), journalcontroller.Update)
 		auth.DELETE(route.DeleteJournal, middleware.PermissionMiddleware(permission.DeleteLoan), journalcontroller.Delete)
+		auth.GET(route.ViewReceipt, middleware.PermissionMiddleware(permission.ViewReceipt), receiptcontroller.Collectfromgoodloan)
+		auth.POST(route.AddReceipt, middleware.PermissionMiddleware(permission.AddReceipt), receiptcontroller.CreateReceipt)
 	}
 }
