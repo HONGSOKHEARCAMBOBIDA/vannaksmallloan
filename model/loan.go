@@ -3,7 +3,7 @@ package model
 type Loan struct {
 	ID                 int     `json:"id"`
 	ClientID           int     `json:"client_id"`
-	CoID               int     `json:"co_id"`
+	CoID               int     `json:"co_id" gorm:"column:co_id"`
 	LoanProductID      int     `json:"loan_product_id"`
 	CashierSessionID   int     `json:"cashier_sessions_id" gorm:"column:cashier_sessions_id"`
 	LoanAmount         float32 `json:"loan_amount"`

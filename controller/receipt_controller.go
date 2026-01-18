@@ -72,3 +72,17 @@ func (cr ReceiptController) CreateReceipt(c *gin.Context) {
 	}
 	share.ResponeSuccess(c, http.StatusOK, "receipt created")
 }
+
+func (cr ReceiptController) Delete(c *gin.Context) {
+	idparam := c.Param("id")
+	id, err := strconv.Atoi(idparam)
+	if err != nil {
+		share.RespondError(c, http.StatusBadRequest, "Invalid id")
+		return
+	}
+	if err := cr.service.Delete(id); err != nil {
+		share.RespondError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	share.ResponeSuccess(c, http.StatusOK, "receipt deleted")
+}

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"math"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 type ReceiptService interface {
 	Collectfromgoodloan(filters map[string]string, pagination request.Pagination) ([]response.CollectfromgoodloanResponse, *model.PaginationMetadata, error)
 	CreateReceipt(id int, userID int, input request.ReceiptRequest) error
+	Delete(id int) error
 }
 
 type receiptservice struct {
@@ -64,7 +66,7 @@ func (s *receiptservice) Collectfromgoodloan(filters map[string]string, paginati
 			SELECT COALESCE(SUM(
 				CASE 
 					WHEN COALESCE(due_amount,0) != COALESCE(paid_amount, 0) AND DATE(payment_date) <= CURRENT_DATE
-					THEN (COALESCE(due_amount,0) - COALESCE(paid_amount, 0))
+					THEN (COALESCE(due_amount,0) - COALESCE(paid_amount, 0)) + COALESCE(penalty_paid,0)
 					ELSE 0 
 				END
 			), 0)
@@ -153,14 +155,10 @@ func (s *receiptservice) CreateReceipt(id int, userID int, input request.Receipt
 
 	for remaining > 0 {
 		var ps model.PaymentSchedule
-		err := tx.
-			Where("loan_id = ? AND status = ?", id, model.PENDING).
-			Order("schedule_number ASC").
-			First(&ps).Error
+		err := tx.Where("loan_id = ? AND status = ?", id, model.PENDING).Order("schedule_number ASC").First(&ps).Error
 
 		if err != nil {
 			tx.Rollback()
-
 			break
 		}
 
@@ -201,8 +199,8 @@ func (s *receiptservice) CreateReceipt(id int, userID int, input request.Receipt
 
 		ps.PrincipalPaid = &newPP
 		ps.InterestPaid = &newIP
-		ps.PenaltyPaid = func() *float32 {
-			v := float32(newPen)
+		ps.PenaltyPaid = func() *float64 {
+			v := float64(newPen)
 			return &v
 		}()
 
@@ -246,4 +244,107 @@ func (s *receiptservice) CreateReceipt(id int, userID int, input request.Receipt
 	}
 
 	return tx.Commit().Error
+}
+
+func (s *receiptservice) Delete(id int) error {
+	tx := s.db.Begin()
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	var receipt model.Receipt
+	if err := tx.First(&receipt, id).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("receipt not found: %w", err)
+	}
+
+	var cs model.CashierSession
+	if err := tx.Where("user_id = ? AND status = ?", receipt.ReceiveBy, 1).
+		Order("id DESC").
+		First(&cs).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("no active cashier session: %w", err)
+	}
+
+	if err := tx.Model(&model.CashierSession{}).
+		Where("id = ?", cs.ID).
+		Update("total_receipts", cs.TotalReceipts-receipt.TotalAmount).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to update cashier session: %w", err)
+	}
+
+	var receiptAllocations []model.ReceiptAllocation
+	if err := tx.Where("receipt_id = ?", id).
+		Find(&receiptAllocations).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to get receipt allocations: %w", err)
+	}
+
+	for _, allocation := range receiptAllocations {
+		var ps model.PaymentSchedule
+		if err := tx.First(&ps, allocation.ScheduleID).Error; err != nil {
+			tx.Rollback()
+			return fmt.Errorf("schedule not found: %w", err)
+		}
+
+		if ps.PrincipalPaid != nil {
+			newPrincipalpaid := *ps.PrincipalPaid - allocation.PrincipalAmount
+			ps.PrincipalPaid = &newPrincipalpaid
+		}
+		if ps.InterestPaid != nil {
+			newInterestpaid := *ps.InterestPaid - allocation.InterestAmount
+			ps.InterestPaid = &newInterestpaid
+		}
+		if ps.PenaltyPaid != nil {
+			newPenaltypaid := *ps.PenaltyPaid - float64(allocation.PenaltyAmount)
+			ps.PenaltyPaid = &newPenaltypaid
+		}
+
+		ps.PaidDate = nil
+		var totalPaid float64
+		if ps.PrincipalPaid != nil {
+			totalPaid += *ps.PrincipalPaid
+		}
+		if ps.InterestPaid != nil {
+			totalPaid += *ps.InterestPaid
+		}
+		if ps.PenaltyPaid != nil {
+			totalPaid += *ps.PenaltyPaid
+		}
+
+		ps.PaidAmount = &totalPaid
+		ps.Status = model.PENDING
+
+		updates := map[string]interface{}{
+			"principal_paid": ps.PrincipalPaid,
+			"interest_paid":  ps.InterestPaid,
+			"penalty_paid":   ps.PenaltyPaid,
+			"paid_amount":    ps.PaidAmount,
+			"status":         ps.Status,
+			"paid_date":      nil,
+		}
+		if err := tx.Model(&model.PaymentSchedule{}).Where("id =?", ps.ID).Updates(updates).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
+	if err := tx.Where("receipt_id = ?", id).
+		Delete(&model.ReceiptAllocation{}).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete allocations: %w", err)
+	}
+
+	if err := tx.Delete(&receipt).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to delete receipt: %w", err)
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("transaction commit failed: %w", err)
+	}
+	return nil
 }

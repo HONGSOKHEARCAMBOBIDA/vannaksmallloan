@@ -67,5 +67,6 @@ func SetupRoutes(r *gin.Engine) {
 		auth.DELETE(route.DeleteJournal, middleware.PermissionMiddleware(permission.DeleteLoan), journalcontroller.Delete)
 		auth.GET(route.ViewReceipt, middleware.PermissionMiddleware(permission.ViewReceipt), receiptcontroller.Collectfromgoodloan)
 		auth.POST(route.AddReceipt, middleware.PermissionMiddleware(permission.AddReceipt), receiptcontroller.CreateReceipt)
+		auth.DELETE(route.DeleteReceipt, middleware.PermissionMiddleware(permission.DeleteReceipt), receiptcontroller.Delete)
 	}
 }
