@@ -14,7 +14,7 @@ import (
 )
 
 type ReceiptService interface {
-	Collectfromgoodloan(filters map[string]string, pagination request.Pagination) ([]response.CollectfromgoodloanResponse, *model.PaginationMetadata, error)
+	Collectfromgoodloan(userID int, filters map[string]string, pagination request.Pagination) ([]response.CollectfromgoodloanResponse, *model.PaginationMetadata, error)
 	CreateReceipt(id int, userID int, input request.ReceiptRequest) error
 	Delete(id int) error
 }
@@ -29,7 +29,7 @@ func NewReceiptService() ReceiptService {
 	}
 }
 
-func (s *receiptservice) Collectfromgoodloan(filters map[string]string, pagination request.Pagination) ([]response.CollectfromgoodloanResponse, *model.PaginationMetadata, error) {
+func (s *receiptservice) Collectfromgoodloan(userID int, filters map[string]string, pagination request.Pagination) ([]response.CollectfromgoodloanResponse, *model.PaginationMetadata, error) {
 
 	var result []response.CollectfromgoodloanResponse
 	var totalCount int64
@@ -40,7 +40,7 @@ func (s *receiptservice) Collectfromgoodloan(filters map[string]string, paginati
 		Joins("LEFT JOIN clients c ON c.id = l.client_id").
 		Joins("LEFT JOIN villages v ON v.id = c.village_id").
 		Joins("LEFT JOIN users u ON u.id = l.co_id").
-		Where("l.status = ?", 3)
+		Where("l.status = ? AND l.co_id =?", 3, userID)
 
 	if v := filters["client_name"]; v != "" {
 		baseQuery = baseQuery.Where("c.name LIKE ?", "%"+v+"%")
@@ -65,7 +65,8 @@ func (s *receiptservice) Collectfromgoodloan(filters map[string]string, paginati
 		(
 			SELECT COALESCE(SUM(
 				CASE 
-					WHEN COALESCE(due_amount,0) != COALESCE(paid_amount, 0) AND DATE(payment_date) <= CURRENT_DATE
+					WHEN COALESCE(due_amount,0) != COALESCE(paid_amount, 0) 
+					AND DATE(payment_date) <= CURRENT_DATE
 					THEN (COALESCE(due_amount,0) - COALESCE(paid_amount, 0)) + COALESCE(penalty_paid,0)
 					ELSE 0 
 				END
@@ -85,7 +86,30 @@ func (s *receiptservice) Collectfromgoodloan(filters map[string]string, paginati
 			), 0)
 			FROM payment_schedules ps
 			WHERE ps.loan_id = l.id
-		) AS total_penalty
+		) AS total_penalty,
+		(
+			SELECT COALESCE(COUNT(
+			CASE
+				WHEN DATE(payment_date) < CURRENT_DATE
+			    AND COALESCE(due_amount,0) != COALESCE(paid_amount, 0)
+				THEN 1
+				ELSE NULL
+			END
+		), 0)
+		FROM payment_schedules ps
+		WHERE ps.loan_id = l.id
+		) AS penalty_day,
+		(
+			SELECT COALESCE(SUM(
+				CASE
+					WHEN COALESCE(due_amount,0) != COALESCE(paid_amount,0)
+					THEN (COALESCE(due_amount,0) - COALESCE(paid_amount,0)) + COALESCE(penalty_paid,0)
+					ELSE NULL
+				END
+			),0)
+			FROM payment_schedules ps 
+			WHERE ps.loan_id =l.id
+		) AS lump_sum_payment
 	`).
 		Order("l.id DESC").
 		Offset(offset).

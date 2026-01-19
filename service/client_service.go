@@ -177,6 +177,9 @@ func (s *clientservice) GetAll() ([]model.Client, error) {
 	if err := s.db.Joins("LEFT JOIN loans ON clients.id = loans.client_id").Where("loans.client_id IS NULL").Find(&clients).Error; err != nil {
 		return nil, err
 	}
+	for i := range clients {
+		clients[i].DateOfBirth = helper.FormatDate(clients[i].DateOfBirth)
+	}
 
 	return clients, nil
 }

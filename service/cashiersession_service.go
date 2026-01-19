@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/hearbong/smallloanbackend/config"
@@ -39,6 +40,18 @@ func (s *cashiersessionservice) Create(userID int) error {
 			tx.Rollback()
 		}
 	}()
+	var count int64
+	if err := tx.Model(&model.CashierSession{}).
+		Where("user_id = ? AND status = ?", userID, model.OPEN).
+		Count(&count).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+
+	if count > 0 {
+		tx.Rollback()
+		return fmt.Errorf("user already has an active cashier session")
+	}
 
 	sessionNumber, err := utils.GenerateSessionNumber(tx)
 	if err != nil {

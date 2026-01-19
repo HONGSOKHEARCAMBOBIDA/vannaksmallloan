@@ -110,3 +110,31 @@ func (cr LoanController) DeleteLoan(c *gin.Context) {
 	share.ResponeSuccess(c, http.StatusOK, "deleted success")
 
 }
+
+func (cr LoanController) GetLoan(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 10
+	}
+	filter := map[string]string{
+		"name":       c.Query("name"),
+		"start_date": c.Query("start_date"),
+	}
+	loan, metadata, err := cr.service.GetLoan(filter, request.Pagination{
+		Page:     page,
+		PageSize: pageSize,
+	})
+	if err != nil {
+		share.RespondError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success":    true,
+		"data":       loan,
+		"pagination": metadata,
+	})
+}

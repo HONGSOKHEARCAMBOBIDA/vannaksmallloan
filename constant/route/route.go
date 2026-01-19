@@ -55,4 +55,6 @@ const (
 	ViewReceipt   = "viewreceipt"
 	AddReceipt    = "addreceipt/:id"
 	DeleteReceipt = "deletereceipt/:id"
+
+	RemovePenalty = "removepenalty/:id"
 )

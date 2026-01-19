@@ -22,6 +22,11 @@ func NewReceiptController() ReceiptController {
 }
 
 func (cr ReceiptController) Collectfromgoodloan(c *gin.Context) {
+	userID, ok := helper.GetUserID(c)
+	if !ok {
+		share.RespondError(c, http.StatusInternalServerError, "please login")
+		return
+	}
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
 	if page < 1 {
@@ -34,7 +39,7 @@ func (cr ReceiptController) Collectfromgoodloan(c *gin.Context) {
 		"client_name":  c.Query("client_name"),
 		"village_name": c.Query("village_name"),
 	}
-	collectfromgoodloan, metadata, err := cr.service.Collectfromgoodloan(filters, request.Pagination{
+	collectfromgoodloan, metadata, err := cr.service.Collectfromgoodloan(userID, filters, request.Pagination{
 		Page:     page,
 		PageSize: pageSize,
 	})
