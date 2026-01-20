@@ -112,6 +112,8 @@ func SetupRoutes(r *gin.Engine) {
 
 		auth.DELETE(route.DeleteReceipt, middleware.PermissionMiddleware(permission.DeleteReceipt), receiptcontroller.Delete)
 
+		auth.GET(route.ViewListReceipt, middleware.PermissionMiddleware(permission.ViewReceipt), receiptcontroller.GetReceiptList)
+
 		auth.PUT(route.RemovePenalty, middleware.PermissionMiddleware(permission.RemovePenalty), paymentschedulecontroller.RemovePenalty)
 	}
 }

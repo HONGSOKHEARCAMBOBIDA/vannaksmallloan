@@ -13,3 +13,17 @@ type CollectfromgoodloanResponse struct {
 	PenaltyDay     int     `json:"penalty_day" gorm:"column:penalty_day"`
 	LumpSumpayment float64 `json:"lump_sum_payment" gorm:"column:lump_sum_payment"`
 }
+
+type ReceiptResponse struct {
+	ID              int     `json:"id"`
+	LoanID          int     `json:"loan_id"`
+	ClientName      string  `json:"client_name"`
+	CoName          string  `json:"co_name"`
+	ReceiptDate     string  `json:"receipt_date"`
+	TotalAmount     float64 `json:"total_amount"`
+	Notes           string  `json:"notes"`
+	PrincipalAmount float64 `json:"principal_amount"`
+	InterestAmount  float64 `json:"interest_amount"`
+	PenaltyAmount   float64 `json:"penalty_amount"`
+	ReceiveByName   string  `json:"receive_by_name"`
+}

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/hearbong/smallloanbackend/config"
+	"github.com/hearbong/smallloanbackend/helper"
 	"github.com/hearbong/smallloanbackend/model"
 	"github.com/hearbong/smallloanbackend/request"
 	"github.com/hearbong/smallloanbackend/response"
@@ -17,6 +18,7 @@ type ReceiptService interface {
 	Collectfromgoodloan(userID int, filters map[string]string, pagination request.Pagination) ([]response.CollectfromgoodloanResponse, *model.PaginationMetadata, error)
 	CreateReceipt(id int, userID int, input request.ReceiptRequest) error
 	Delete(id int) error
+	GetReceiptList(filters map[string]string, pagaination request.Pagination) ([]response.ReceiptResponse, *model.PaginationMetadata, error)
 }
 
 type receiptservice struct {
@@ -267,6 +269,24 @@ func (s *receiptservice) CreateReceipt(id int, userID int, input request.Receipt
 		}
 	}
 
+	var pendingCount int64
+	if err := tx.Model(&model.PaymentSchedule{}).Where("loan_id =? AND status =?", id, model.PENDING).
+		Count(&pendingCount).Error; err != nil {
+		tx.Rollback()
+		return err
+	}
+	if pendingCount == 0 {
+		now := time.Now().Format("2006-01-02")
+		if err := tx.Model(&model.Loan{}).Where("id =?", id).Updates(map[string]interface{}{
+			"status":        0,
+			"closed_date":   &now,
+			"closed_reason": "បាន់បង់ផ្ដាច់",
+		}).Error; err != nil {
+			tx.Rollback()
+			return err
+		}
+	}
+
 	return tx.Commit().Error
 }
 
@@ -355,6 +375,34 @@ func (s *receiptservice) Delete(id int) error {
 		}
 	}
 
+	var loan model.Loan
+
+	if err := tx.First(&loan, receipt.LoanID).Error; err != nil {
+		tx.Rollback()
+		return fmt.Errorf("loan not found: %w", err)
+	}
+
+	if loan.Status == 0 {
+		var pendingCount int64
+		if err := tx.Model(&model.PaymentSchedule{}).Where("loan_id =? AND status =?", receipt.LoanID, model.PENDING).
+			Count(&pendingCount).Error; err != nil {
+			tx.Rollback()
+			return fmt.Errorf("failded to count schedule: %w", err)
+		}
+
+		if pendingCount > 0 {
+			if err := tx.Model(&model.Loan{}).Where("id =?", receipt.LoanID).
+				Updates(map[string]interface{}{
+					"status":        3,
+					"closed_date":   nil,
+					"closed_reason": nil,
+				}).Error; err != nil {
+				tx.Rollback()
+				return fmt.Errorf("failded to revert loan staus: %w", err)
+			}
+		}
+	}
+
 	if err := tx.Where("receipt_id = ?", id).
 		Delete(&model.ReceiptAllocation{}).Error; err != nil {
 		tx.Rollback()
@@ -371,4 +419,88 @@ func (s *receiptservice) Delete(id int) error {
 		return fmt.Errorf("transaction commit failed: %w", err)
 	}
 	return nil
+}
+
+func (s *receiptservice) GetReceiptList(filters map[string]string, pagination request.Pagination) ([]response.ReceiptResponse, *model.PaginationMetadata, error) {
+	var result []response.ReceiptResponse
+	var totalCount int64
+	offset := (pagination.Page - 1) * pagination.PageSize
+
+	baseQuery := s.db.Table("receipts r").
+		Joins("LEFT JOIN loans l ON l.id = r.loan_id").
+		Joins("LEFT JOIN users u ON u.id = l.co_id").
+		Joins("LEFT JOIN clients c ON c.id = l.client_id").
+		Joins("LEFT JOIN users uc ON uc.id = r.received_by").
+		Joins("LEFT JOIN receipt_allocations ra ON ra.receipt_id = r.id")
+
+	if v := filters["client_name"]; v != "" {
+		baseQuery = baseQuery.Where("c.name LIKE ?", "%"+v+"%")
+	}
+	if v := filters["co_id"]; v != "" {
+		baseQuery = baseQuery.Where("l.co_id = ?", v)
+	}
+	if v := filters["receipt_number"]; v != "" {
+		baseQuery = baseQuery.Where("r.receipt_number LIKE ?", "%"+v+"%")
+	}
+
+	if startDate := filters["start_date"]; startDate != "" {
+		baseQuery = baseQuery.Where("r.receipt_date >= ?", startDate)
+	}
+	if endDate := filters["end_date"]; endDate != "" {
+		baseQuery = baseQuery.Where("r.receipt_date <= ?", endDate)
+	}
+
+	if startDate := filters["start"]; startDate != "" {
+		if endDate := filters["end"]; endDate != "" {
+			baseQuery = baseQuery.Where("r.receipt_date BETWEEN ? AND ?", startDate, endDate)
+		} else {
+			baseQuery = baseQuery.Where("r.receipt_date >= ?", startDate)
+		}
+	} else if endDate := filters["end"]; endDate != "" {
+		baseQuery = baseQuery.Where("r.receipt_date <= ?", endDate)
+	}
+
+	if err := baseQuery.Session(&gorm.Session{}).Count(&totalCount).Error; err != nil {
+		return nil, nil, err
+	}
+
+	err := baseQuery.
+		Select(`
+			r.id AS id,
+			r.receipt_number AS receipt_number,
+			l.id AS loan_id,
+			c.name AS client_name,
+			u.name AS co_name,
+			r.receipt_date AS receipt_date,
+			r.total_amount AS total_amount,
+			r.notes AS notes,
+			ra.principal_amount AS principal_amount,
+			ra.interest_amount AS interest_amount,
+			ra.penalty_amount AS penalty_amount,
+			uc.name AS receive_by_name
+		`).
+		Order("r.id DESC").
+		Offset(offset).
+		Limit(pagination.PageSize).
+		Scan(&result).Error
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for i := range result {
+
+		result[i].ReceiptDate = helper.FormatDate(result[i].ReceiptDate)
+	}
+
+	totalPages := int(math.Ceil(float64(totalCount) / float64(pagination.PageSize)))
+
+	return result, &model.PaginationMetadata{
+		Page:       pagination.Page,
+		PageSize:   pagination.PageSize,
+		TotalCount: int(totalCount),
+		TotalPages: totalPages,
+		HasNext:    pagination.Page < totalPages,
+		HasPrev:    pagination.Page > 1,
+	}, nil
 }

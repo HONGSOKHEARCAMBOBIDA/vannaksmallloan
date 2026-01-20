@@ -91,3 +91,36 @@ func (cr ReceiptController) Delete(c *gin.Context) {
 	}
 	share.ResponeSuccess(c, http.StatusOK, "receipt deleted")
 }
+
+func (cr ReceiptController) GetReceiptList(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("pageSize", "10"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 10
+	}
+	filters := map[string]string{
+		"client_name":    c.Query("client_name"),
+		"co_id":          c.Query("co_id"),
+		"receipt_number": c.Query("receipt_number"),
+		"start_date":     c.Query("start_date"),
+		"end_date":       c.Query("end_date"),
+		"start":          c.Query("start"),
+		"end":            c.Query("end"),
+	}
+	result, metadata, err := cr.service.GetReceiptList(filters, request.Pagination{
+		Page:     page,
+		PageSize: pageSize,
+	})
+	if err != nil {
+		share.RespondError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success":    true,
+		"data":       result,
+		"pagination": metadata,
+	})
+}
