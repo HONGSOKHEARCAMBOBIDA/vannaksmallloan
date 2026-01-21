@@ -58,4 +58,5 @@ const (
 	DeleteReceipt   = "deletereceipt/:id"
 
 	RemovePenalty = "removepenalty/:id"
+	ViewShedule   = "viewschedule/:id"
 )

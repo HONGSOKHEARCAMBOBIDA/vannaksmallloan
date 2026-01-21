@@ -54,4 +54,5 @@ const (
 	DeleteReceipt = "delete-receipt"
 
 	RemovePenalty = "remove-penalty"
+	ViewShedule   = "view-schedule"
 )

@@ -32,3 +32,18 @@ func (cr PaymentScheduleController) RemovePenalty(c *gin.Context) {
 	}
 	share.ResponeSuccess(c, http.StatusOK, "remove penalty success")
 }
+
+func (cr PaymentScheduleController) GetFullPaymentSchedule(c *gin.Context) {
+	idparam := c.Param("id")
+	id, err := strconv.Atoi(idparam)
+	if err != nil {
+		share.RespondError(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	data, err := cr.service.GetFullPaymentSchedule(id)
+	if err != nil {
+		share.RespondError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	share.RespondDate(c, http.StatusOK, data)
+}

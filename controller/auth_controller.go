@@ -30,5 +30,6 @@ func (cr AuthController) Login(c *gin.Context) {
 		share.RespondError(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	share.ResponeSuccess(c, 200, result.Token)
+	//share.ResponeSuccess(c, 200, result.Token)
+	share.RespondDate(c, http.StatusOK, result)
 }
