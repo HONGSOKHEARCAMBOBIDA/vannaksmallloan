@@ -23,11 +23,23 @@ func SetupRoutes(r *gin.Engine) {
 	journalcontroller := controller.NewJournalController()
 	receiptcontroller := controller.NewReceiptController()
 	paymentschedulecontroller := controller.NewPaymentScheduleController()
+	provincecontroller := controller.NewProvinceController()
+	districtcontroller := controller.NewDistrictController()
+	communcecontroller := controller.NewCommunceController()
+	villagecontroller := controller.NewVillageController()
 	r.Static("/clientimage", "./public/clientimage")
 	r.POST("/login", authcontroller.Login)
 	auth := r.Group("/")
 	auth.Use(middleware.AuthMiddleware())
 	{
+		auth.GET(route.ViewVillage, middleware.PermissionMiddleware(permission.Viewaddress), villagecontroller.GetVillage)
+
+		auth.GET(route.ViewCommunce, middleware.PermissionMiddleware(permission.Viewaddress), communcecontroller.GetCommunce)
+
+		auth.GET(route.ViewDistrict, middleware.PermissionMiddleware(permission.Viewaddress), districtcontroller.GetDistrict)
+
+		auth.GET(route.ViewProvince, middleware.PermissionMiddleware(permission.Viewaddress), provincecontroller.GetProvince)
+
 		auth.GET(route.ViewRole, middleware.PermissionMiddleware(permission.ViewRole), rolecontroller.GetRole)
 
 		auth.POST(route.AddRole, middleware.PermissionMiddleware(permission.AddRole), rolecontroller.CreateRole)
@@ -117,5 +129,9 @@ func SetupRoutes(r *gin.Engine) {
 		auth.PUT(route.RemovePenalty, middleware.PermissionMiddleware(permission.RemovePenalty), paymentschedulecontroller.RemovePenalty)
 
 		auth.GET(route.ViewShedule, middleware.PermissionMiddleware(permission.ViewShedule), paymentschedulecontroller.GetFullPaymentSchedule)
+
+		auth.GET(route.ViewBalancesheet, middleware.PermissionMiddleware(permission.ViewJournal), journalcontroller.GetBalanceSheet)
+
+		auth.GET(route.ViewBalancesheetperiod, middleware.PermissionMiddleware(permission.ViewJournal), journalcontroller.GetBalanceSheetForDateRange)
 	}
 }

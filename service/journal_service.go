@@ -19,6 +19,7 @@ type JournalService interface {
 	Get(filters map[string]string, pagination request.Pagination) ([]response.JournalResponse, *model.PaginationMetadata, error)
 	Update(id int, input request.JournalRequestUpdate) error
 	Delete(id int) error
+	GenerateBalanceSheet(asofDate string) (*response.BalanceSheetResponse, error)
 }
 
 type journalservice struct {
@@ -29,6 +30,134 @@ func NewJournalService() JournalService {
 	return &journalservice{
 		db: config.DB,
 	}
+}
+
+func (s *journalservice) processAssets(accounts []AccountBalanceResult) response.BalanceSheetSection {
+	section := response.BalanceSheetSection{
+		Title: "ASSETS",
+	}
+	for _, acc := range accounts {
+		if acc.AccountType == "ASSET" {
+			section.Accounts = append(section.Accounts, response.AccountBalance{
+				AccountCode: acc.AccountCode,
+				AccountName: acc.AccountName,
+				Balance:     acc.Balance,
+			})
+			section.Total += acc.Balance
+		}
+	}
+	return section
+}
+func (s *journalservice) processLiabilities(accounts []AccountBalanceResult) response.BalanceSheetSection {
+	section := response.BalanceSheetSection{
+		Title: "LIABILITIES",
+	}
+
+	for _, acc := range accounts {
+		if acc.AccountType == "LIABILITY" {
+			section.Accounts = append(section.Accounts, response.AccountBalance{
+				AccountCode: acc.AccountCode,
+				AccountName: acc.AccountName,
+				Balance:     acc.Balance,
+			})
+			section.Total += acc.Balance
+		}
+	}
+
+	return section
+}
+
+func (s *journalservice) processEquity(accounts []AccountBalanceResult) response.BalanceSheetSection {
+	section := response.BalanceSheetSection{
+		Title: "EQUITY",
+	}
+
+	for _, acc := range accounts {
+		if acc.AccountType == "EQUITY" || acc.AccountType == "INCOME" {
+			section.Accounts = append(section.Accounts, response.AccountBalance{
+				AccountCode: acc.AccountCode,
+				AccountName: acc.AccountName,
+				Balance:     acc.Balance,
+			})
+			section.Total += acc.Balance
+		}
+	}
+
+	return section
+}
+
+func (s *journalservice) calculateTotals(res *response.BalanceSheetResponse) response.BalanceSheetTotals {
+	totals := response.BalanceSheetTotals{
+		TotalAssets:            res.Assets.Total,
+		TotalLiabilities:       res.Liabilities.Total,
+		TotalEquity:            res.Equity.Total,
+		TotalLiabilitiesEquity: res.Liabilities.Total + res.Equity.Total,
+	}
+
+	totals.Difference = totals.TotalAssets - totals.TotalLiabilitiesEquity
+
+	return totals
+}
+
+func (s *journalservice) checkIfBalanced(totals response.BalanceSheetTotals) bool {
+	// Allow small rounding differences
+	diff := totals.TotalAssets - totals.TotalLiabilitiesEquity
+	return diff >= -0.01 && diff <= 0.01
+}
+
+type AccountBalanceResult struct {
+	AccountCode string  `gorm:"column:account_code"`
+	AccountName string  `gorm:"column:account_name"`
+	AccountType string  `gorm:"column:account_type_name"`
+	Balance     float64 `gorm:"column:balance"`
+}
+
+func (s *journalservice) GenerateBalanceSheet(asOfDate string) (*response.BalanceSheetResponse, error) {
+	response := &response.BalanceSheetResponse{
+		ReportTitle: "BALANCE SHEET",
+		ReportDate:  asOfDate,
+	}
+
+	// Get account balances
+	var accountBalances []AccountBalanceResult
+
+	// Query to get all account balances
+	query := `
+        SELECT 
+            ca.code AS account_code,
+            ca.description AS account_name,
+            at.name AS account_type_name,
+            CASE 
+                WHEN at.name IN ('ASSET', 'EXPENSE') 
+                THEN COALESCE(SUM(j.debit_amount - j.credit_amount), 0)
+                ELSE COALESCE(SUM(j.credit_amount - j.debit_amount), 0)
+            END AS balance
+        FROM chart_accounts ca
+        LEFT JOIN account_types at ON ca.account_type_id = at.id
+        LEFT JOIN journals j ON ca.id = j.chart_account_id 
+            AND j.transaction_date <= ?
+        GROUP BY ca.id, ca.code, ca.description, at.name
+        HAVING balance != 0
+        ORDER BY ca.code
+    `
+
+	if err := s.db.Raw(query, asOfDate).Scan(&accountBalances).Error; err != nil {
+		return nil, err
+	}
+
+	// Process accounts into sections
+	response.Assets = s.processAssets(accountBalances)
+	response.Liabilities = s.processLiabilities(accountBalances)
+	response.Equity = s.processEquity(accountBalances)
+
+	// Calculate totals
+	response.Totals = s.calculateTotals(response)
+
+	// Check if balance sheet is balanced
+	response.Totals.IsBalanced = s.checkIfBalanced(response.Totals)
+	response.Message = "Balance sheet generate successfully"
+
+	return response, nil
 }
 
 func (s *journalservice) Create(userID int, input request.JournalRequestCreate) error {

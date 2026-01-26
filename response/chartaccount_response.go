@@ -9,3 +9,12 @@ type ChartAccountResponse struct {
 	AccountTypeName string `json:"account_type_name"`
 	Isactive        bool   `json:"is_active" gorm:"column:is_active"`
 }
+
+type ChartAccountResponseBalance struct {
+	ID          int     `json:"id"`
+	Code        string  `json:"code"`
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Isactive    bool    `json:"is_active" gorm:"column:is_active"`
+	Amount      float64 `json:"amount"`
+}

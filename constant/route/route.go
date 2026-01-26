@@ -59,4 +59,12 @@ const (
 
 	RemovePenalty = "removepenalty/:id"
 	ViewShedule   = "viewschedule/:id"
+
+	ViewProvince = "viewprovince"
+	ViewDistrict = "viewdistrict/:id"
+	ViewCommunce = "viewcommunce/:id"
+	ViewVillage  = "viewvillage/:id"
+
+	ViewBalancesheet       = "viewbalancesheet"
+	ViewBalancesheetperiod = "viewbalancesheetperiod"
 )

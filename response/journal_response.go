@@ -14,3 +14,34 @@ type JournalResponse struct {
 	CreatedBy        int     `json:"created_by"`
 	CreatedByName    string  `json:"created_by_name"`
 }
+
+type BalanceSheetTotals struct {
+	TotalAssets            float64 `json:"total_assets"`
+	TotalLiabilities       float64 `json:"total_liabilities"`
+	TotalEquity            float64 `json:"total_equity"`
+	TotalLiabilitiesEquity float64 `json:"total_liabilities_equity"`
+	IsBalanced             bool    `json:"is_balanced"`
+	Difference             float64 `json:"difference"`
+}
+
+type AccountBalance struct {
+	AccountCode string  `json:"account_code"`
+	AccountName string  `json:"account_name"`
+	Balance     float64 `json:"balance"`
+}
+
+type BalanceSheetSection struct {
+	Title    string           `json:"title"`
+	Accounts []AccountBalance `json:"accounts"`
+	Total    float64          `json:"total"`
+}
+
+type BalanceSheetResponse struct {
+	ReportTitle string              `json:"report_title"`
+	ReportDate  string              `json:"report_date"`
+	Assets      BalanceSheetSection `json:"assets"`
+	Liabilities BalanceSheetSection `json:"liabilities"`
+	Equity      BalanceSheetSection `json:"equity"`
+	Totals      BalanceSheetTotals  `json:"totals"`
+	Message     string              `json:"message"`
+}

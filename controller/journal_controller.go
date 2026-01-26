@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/hearbong/smallloanbackend/constant/share"
@@ -99,4 +100,40 @@ func (cr JournalController) Delete(c *gin.Context) {
 		return
 	}
 	share.ResponeSuccess(c, http.StatusOK, "Journal deleted")
+}
+
+func (cr JournalController) GetBalanceSheet(c *gin.Context) {
+	data := c.Query("date")
+	if data == "" {
+		data = time.Now().Format("2006-01-02")
+	}
+	if _, err := time.Parse("2006-01-02", data); err != nil {
+		share.RespondError(c, http.StatusBadRequest, "invalid data format")
+		return
+	}
+	balancesheet, err := cr.service.GenerateBalanceSheet(data)
+	if err != nil {
+		share.RespondError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !balancesheet.Totals.IsBalanced {
+		balancesheet.Message = "warning: Balance sheet not balance!"
+	}
+	share.RespondDate(c, http.StatusOK, balancesheet)
+}
+
+func (cr JournalController) GetBalanceSheetForDateRange(c *gin.Context) {
+	startDate := c.Query("start")
+	endDate := c.Query("end")
+	if startDate == "" || endDate == "" {
+		share.RespondError(c, http.StatusBadRequest, "start and end required")
+		return
+	}
+	balancesheet, err := cr.service.GenerateBalanceSheet(endDate)
+	if err != nil {
+		share.RespondError(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	balancesheet.ReportTitle = "BALANCE SHEET - PERIOD ENDING"
+	share.RespondDate(c, http.StatusOK, balancesheet)
 }

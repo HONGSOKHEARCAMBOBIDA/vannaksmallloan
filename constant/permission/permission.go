@@ -55,4 +55,6 @@ const (
 
 	RemovePenalty = "remove-penalty"
 	ViewShedule   = "view-schedule"
+
+	Viewaddress = "viewaddress"
 )
