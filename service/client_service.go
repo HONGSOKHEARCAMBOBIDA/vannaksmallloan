@@ -66,7 +66,7 @@ func (s *clientservice) Create(input request.ClientRequestCreate, c *gin.Context
 			tx.Rollback()
 			return fmt.Errorf("failed to save image: %v", err)
 		}
-		imagePath = clientimagePath
+		imagePath = clientimageName
 	}
 	gender := model.Gender(input.Gender)
 	client := model.Client{
@@ -143,7 +143,7 @@ func (s *clientservice) Update(id int, input request.ClientRequestUpdate, c *gin
 				fmt.Printf("Warning: Failed to delete old image: %v\n", err)
 			}
 		}
-		client.ImagePath = clientimagePath
+		client.ImagePath = clientimageName
 	}
 
 	// Update client fields
