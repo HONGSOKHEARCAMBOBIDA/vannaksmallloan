@@ -92,6 +92,8 @@ func SetupRoutes(r *gin.Engine) {
 
 		auth.GET(route.ViewCashierSession, middleware.PermissionMiddleware(permission.ViewCashierSession), cashiersesseioncontroller.Get)
 
+		auth.GET(route.ViewCashierSessionforrollbacke,middleware.PermissionMiddleware(permission.ViewCashierSession),cashiersesseioncontroller.GetforRollback)
+
 		auth.PUT(route.VerifyCashierSession, middleware.PermissionMiddleware(permission.VerifyCashierSession), cashiersesseioncontroller.Verify)
 
 		auth.DELETE(route.RollbackVerify, middleware.PermissionMiddleware(permission.RollbackVerify), cashiersesseioncontroller.RollbackVerify)

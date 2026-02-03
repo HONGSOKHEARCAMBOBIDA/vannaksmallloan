@@ -36,6 +36,7 @@ const (
 	DeleteLoan         = "deleteloan/:id"
 
 	ViewCashierSession   = "viewcashiersession"
+	ViewCashierSessionforrollbacke = "GetforRollback"
 	AddCashiersSession   = "addcashiersession"
 	VerifyCashierSession = "verifysession/:id"
 	RollbackVerify       = "rollbackverify/:id"

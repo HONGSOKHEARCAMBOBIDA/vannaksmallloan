@@ -83,9 +83,11 @@ func (s *paymentschedulesservice) GetFullPaymentSchedule(loanID int) (response.F
         co.phone AS co_phone
     `).Scan(&loan).Error
 
+
 	if err != nil {
 		return result, err
 	}
+
 
 	// Check if loan exists
 	if loan.LoanID == 0 {
@@ -109,6 +111,14 @@ func (s *paymentschedulesservice) GetFullPaymentSchedule(loanID int) (response.F
 		Schedule:     []response.Schedule{},
 	}
 
+	
+if result.ApproveDate != nil {
+	formatted := helper.FormatDate(*result.ApproveDate)
+	result.ApproveDate = &formatted
+}
+
+
+
 	// Get payment schedules
 	var schedules []model.PaymentSchedule
 	if err := s.db.Where("loan_id = ?", loan.LoanID).
@@ -118,6 +128,9 @@ func (s *paymentschedulesservice) GetFullPaymentSchedule(loanID int) (response.F
 	}
 	for i := range schedules {
 		schedules[i].PaymentDate = helper.FormatDate(schedules[i].PaymentDate)
+		
+
+
 	}
 
 	for _, ps := range schedules {

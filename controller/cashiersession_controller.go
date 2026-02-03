@@ -83,3 +83,13 @@ func (cr CashierSessionController) RollbackVerify(c *gin.Context) {
 	share.ResponeSuccess(c, http.StatusOK, "Rollback Verify Success")
 
 }
+
+
+func (cr CashierSessionController) GetforRollback(c *gin.Context) {
+	data,err := cr.service.GetforRollback()
+	if err != nil {
+		share.RespondError(c,http.StatusInternalServerError,err.Error())
+		return
+	}
+	share.RespondDate(c,http.StatusOK,data)
+}

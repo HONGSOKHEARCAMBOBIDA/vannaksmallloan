@@ -17,6 +17,7 @@ type CashierSessionService interface {
 	Get(userID int) ([]response.CashierSessionResponse, error)
 	Verify(userID int, id int) error
 	RollbackVerify(id int) error
+	GetforRollback()([]response.CashierSessionResponse,error)
 }
 
 type cashiersessionservice struct {
@@ -105,7 +106,7 @@ func (s *cashiersessionservice) Get(userID int) ([]response.CashierSessionRespon
 	`).
 		Joins("LEFT JOIN users u ON u.id = cs.user_id").
 		Joins("LEFT JOIN users uv ON uv.id = cs.verified_by")
-	db = db.Where("user_id =? AND status =?", userID, "OPEN")
+	db = db.Where("user_id =? AND status =?", userID,1)
 	if err := db.Scan(&cashiersession).Error; err != nil {
 		return nil, err
 	}
@@ -220,4 +221,40 @@ func (s *cashiersessionservice) RollbackVerify(id int) error {
 	}
 	return tx.Commit().Error
 
+}
+
+func (s *cashiersessionservice) GetforRollback()([]response.CashierSessionResponse,error) {
+	var cashiersession []response.CashierSessionResponse
+	today := time.Now().Format("2006-01-02")
+		db := s.db.Table("cashier_sessions cs").Select(`
+		cs.id AS id,
+		cs.session_number AS session_number,
+		u.id AS user_id,
+		u.name AS user_name,
+		cs.session_date AS session_date,
+		cs.start_time AS start_time,
+		cs.end_time AS end_time,
+		cs.opening_balance AS opening_balance,
+		cs.closing_balance AS closing_balance,
+		cs.total_receipts AS total_receipts,
+		cs.difference AS difference,
+		cs.status AS status,
+		cs.notes AS status,
+		uv.id AS verified_by,
+		uv.name AS verified_by_name,
+		cs.verified_at AS verified_at
+	`).
+		Joins("LEFT JOIN users u ON u.id = cs.user_id").
+		Joins("LEFT JOIN users uv ON uv.id = cs.verified_by")
+	db = db.Order("cs.id DESC")
+	db = db.Where("status =? AND DATE(cs.session_date) = ?",2,today)
+	if err := db.Scan(&cashiersession).Error; err != nil {
+		return  nil,err
+	}
+		for i := range cashiersession {
+		cashiersession[i].SessionDate = helper.FormatDate(cashiersession[i].SessionDate)
+		cashiersession[i].StartTime = helper.FormatTime(cashiersession[i].StartTime)
+		cashiersession[i].VerifiedAt = helper.FormatTime(cashiersession[i].VerifiedAt)
+	}
+	return  cashiersession,nil
 }
