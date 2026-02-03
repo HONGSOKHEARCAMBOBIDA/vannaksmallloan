@@ -4,6 +4,7 @@ type LoanResponse struct {
 	ID                  int     `json:"id"`
 	ClientID            int     `json:"client_id"`
 	ClientName          string  `json:"client_name"`
+	ClientImage 		string `json:"client_image"`
 	ClientGender        int     `json:"client_gender"`
 	ClientMaritalStatus string  `json:"client_marital_status"`
 	ClientDoB           string  `json:"client_date_of_birth" gorm:"column:client_date_of_birth"`

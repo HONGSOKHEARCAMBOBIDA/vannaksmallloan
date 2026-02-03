@@ -9,7 +9,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/hearbong/smallloanbackend/config"
-	"github.com/hearbong/smallloanbackend/constant/route"
 	"github.com/hearbong/smallloanbackend/helper" // assuming you have a helper package
 	"github.com/hearbong/smallloanbackend/model"
 	"github.com/hearbong/smallloanbackend/request"
@@ -36,18 +35,18 @@ func NewClientService() ClientService {
 }
 
 func (s *clientservice) Create(input request.ClientRequestCreate, c *gin.Context, userID int) error {
-	requestID := c.GetHeader("Idempotency-Key")
-	if requestID == "" {
-		return fmt.Errorf("missing Idempotency-Key")
-	}
-	var existing model.IdempotentRequest
-	err := s.db.Where("request_id =?", requestID).First(&existing).Error
-	if err == nil {
-		return nil
-	}
-	if err != gorm.ErrRecordNotFound {
-		return err
-	}
+	// requestID := c.GetHeader("Idempotency-Key")
+	// if requestID == "" {
+	// 	return fmt.Errorf("missing Idempotency-Key")
+	// }
+	// var existing model.IdempotentRequest
+	// err := s.db.Where("request_id =?", requestID).First(&existing).Error
+	// if err == nil {
+	// 	return nil
+	// }
+	// if err != gorm.ErrRecordNotFound {
+	// 	return err
+	// }
 	tx := s.db.Begin()
 
 	if tx.Error != nil {
@@ -59,13 +58,13 @@ func (s *clientservice) Create(input request.ClientRequestCreate, c *gin.Context
 		}
 	}()
 
-	if err := tx.Create(&model.IdempotentRequest{
-		RequestID: requestID,
-		Endpoint:  route.AddClient,
-	}).Error; err != nil {
-		tx.Rollback()
-		return err
-	}
+	// if err := tx.Create(&model.IdempotentRequest{
+	// 	RequestID: requestID,
+	// 	Endpoint:  route.AddClient,
+	// }).Error; err != nil {
+	// 	tx.Rollback()
+	// 	return err
+	// }
 
 	var imagePath string
 	file, err := c.FormFile("clientimage")

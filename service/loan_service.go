@@ -119,6 +119,7 @@ func (s *loanservice) GetLoanForCheck(userID int) ([]response.LoanResponse, erro
 	l.id AS id,
 	c.id AS client_id,
 	c.name AS client_name,
+	c.image_path AS client_image,
 	c.gender AS client_gender,
 	c.marital_status AS client_marital_status,
 	c.date_of_birth AS client_date_of_birth,
@@ -225,7 +226,7 @@ func (s *loanservice) GetLoanForApprove(userID int) ([]response.LoanResponse, er
 	c.date_of_birth AS client_date_of_birth,
 	c.occupation AS client_occupation,
 	c.phone AS client_phone,
-
+	c.image_path AS client_image,
 	p.id AS province_id,
 	p.name AS province_name,
 	d.id AS district_id,
@@ -499,7 +500,7 @@ func (s *loanservice) GetLoan(filter map[string]string, pagination request.Pagin
 	c.date_of_birth AS client_date_of_birth,
 	c.occupation AS client_occupation,
 	c.phone AS client_phone,
-
+	c.image_path AS client_image,
 	p.id AS province_id,
 	p.name AS province_name,
 	d.id AS district_id,
