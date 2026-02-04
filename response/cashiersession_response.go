@@ -10,7 +10,7 @@ type CashierSessionResponse struct {
 	EndTime        string  `json:"end_time"`
 	OpeningBalance float64 `json:"opening_balance"`
 	ClosingBalance float64 `json:"closing_balance"`
-	TotalReceipt   float64 `json:"total_receipts"`
+	TotalReceipt   float64 `json:"total_receipts" gorm:"column:total_receipts"`
 	Difference     float64 `json:"difference"`
 	Status         string  `json:"status"`
 	Notes          string  `json:"notes"`
