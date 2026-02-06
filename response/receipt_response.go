@@ -4,6 +4,7 @@ type CollectfromgoodloanResponse struct {
 	ID             int     `json:"id"`
 	ClientID       int     `json:"client_id"`
 	ClientName     string  `json:"client_name"`
+	ClientImage    string  `json:"client_image" gorm:"column:client_image"`
 	UserID         int     `json:"user_id"`
 	UserName       string  `json:"user_name"`
 	VillageID      int     `json:"village_id"`
@@ -18,6 +19,7 @@ type ReceiptResponse struct {
 	ID              int     `json:"id"`
 	LoanID          int     `json:"loan_id"`
 	ClientName      string  `json:"client_name"`
+	ClientImage    string  `json:"client_image" gorm:"column:client_image"`
 	CoName          string  `json:"co_name"`
 	ReceiptDate     string  `json:"receipt_date"`
 	TotalAmount     float64 `json:"total_amount"`

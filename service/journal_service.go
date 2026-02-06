@@ -268,7 +268,7 @@ func (s *journalservice) Get(filters map[string]string, pagination request.Pagin
 		j.transaction_date AS transaction_date,
 		c.id AS chart_account_id,
 		c.code AS chart_account_code,
-		c.name AS chart_account_name,
+		c.description AS chart_account_name,
 		j.debit_amount AS debit_amount,
 		j.credit_amount AS credit_amount,
 		j.description AS description,
