@@ -292,7 +292,7 @@ func (s *journalservice) Get(filters map[string]string, pagination request.Pagin
 	if err := db.Count(&totalCount).Error; err != nil {
 		return nil, nil, err
 	}
-	if err := db.Offset(offset).Limit(pagination.PageSize).Order("j.id DESC").Scan(&journal).Error; err != nil {
+	if err := db.Offset(offset).Limit(pagination.PageSize).Order(j.id ASC).Scan(&journal).Error; err != nil {
 		return nil, nil, err
 	}
 	totalPages := int(math.Ceil(float64(totalCount) / float64(pagination.PageSize)))
