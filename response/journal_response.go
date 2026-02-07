@@ -45,3 +45,8 @@ type BalanceSheetResponse struct {
 	Totals      BalanceSheetTotals  `json:"totals"`
 	Message     string              `json:"message"`
 }
+
+type Incomestatment struct {
+	TotalIncome float64 `json:"total_income"`
+	TotalExpense float64 `json:"total_expense"`
+}

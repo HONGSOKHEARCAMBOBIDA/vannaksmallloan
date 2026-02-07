@@ -20,6 +20,7 @@ type JournalService interface {
 	Update(id int, input request.JournalRequestUpdate) error
 	Delete(id int) error
 	GenerateBalanceSheet(asofDate string) (*response.BalanceSheetResponse, error)
+	Incomestatment(asofDate string)(response.Incomestatment,error)
 }
 
 type journalservice struct {
@@ -204,6 +205,41 @@ func (s *journalservice) Create(userID int, input request.JournalRequestCreate) 
 	return nil
 }
 
+func (s *journalservice) Incomestatment(asofDate string) (response.Incomestatment, error) {
+	var res response.Incomestatment
+
+	query := `
+		SELECT
+			COALESCE(SUM(
+				CASE 
+					WHEN at.name = 'INCOME' 
+					THEN j.credit_amount - j.debit_amount 
+					ELSE 0 
+				END
+			), 0) AS total_income,
+
+			COALESCE(SUM(
+				CASE 
+					WHEN at.name = 'EXPENSE' 
+					THEN j.debit_amount - j.credit_amount 
+					ELSE 0 
+				END
+			), 0) AS total_expense
+		FROM chart_accounts ca
+		LEFT JOIN account_types at ON at.id = ca.account_type_id
+		LEFT JOIN journals j 
+			ON ca.id = j.chart_account_id
+			AND j.transaction_date <= ?
+	`
+
+	if err := s.db.Raw(query, asofDate).Scan(&res).Error; err != nil {
+		return response.Incomestatment{}, err
+	}
+
+	return res, nil
+}
+
+
 func (s *journalservice) Update(id int, input request.JournalRequestUpdate) error {
 	tx := s.db.Begin()
 	if tx.Error != nil {
@@ -292,7 +328,7 @@ func (s *journalservice) Get(filters map[string]string, pagination request.Pagin
 	if err := db.Count(&totalCount).Error; err != nil {
 		return nil, nil, err
 	}
-	if err := db.Offset(offset).Limit(pagination.PageSize).Order(j.id ASC).Scan(&journal).Error; err != nil {
+	if err := db.Offset(offset).Limit(pagination.PageSize).Scan(&journal).Error; err != nil {
 		return nil, nil, err
 	}
 	totalPages := int(math.Ceil(float64(totalCount) / float64(pagination.PageSize)))

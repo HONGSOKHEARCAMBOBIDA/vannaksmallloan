@@ -123,10 +123,9 @@ func (cr JournalController) GetBalanceSheet(c *gin.Context) {
 }
 
 func (cr JournalController) GetBalanceSheetForDateRange(c *gin.Context) {
-	startDate := c.Query("start")
 	endDate := c.Query("end")
-	if startDate == "" || endDate == "" {
-		share.RespondError(c, http.StatusBadRequest, "start and end required")
+	if endDate == "" {
+		share.RespondError(c, http.StatusBadRequest, "date required")
 		return
 	}
 	balancesheet, err := cr.service.GenerateBalanceSheet(endDate)
@@ -136,4 +135,18 @@ func (cr JournalController) GetBalanceSheetForDateRange(c *gin.Context) {
 	}
 	balancesheet.ReportTitle = "BALANCE SHEET - PERIOD ENDING"
 	share.RespondDate(c, http.StatusOK, balancesheet)
+}
+
+func (cr JournalController) Incomestatement(c *gin.Context) {
+	endDate := c.Query("end")
+	if endDate == ""{
+		share.RespondError(c,http.StatusBadRequest,"date required")
+		return
+	}
+	incomestatement,err := cr.service.Incomestatment(endDate)
+	if err != nil {
+		share.RespondError(c,http.StatusInternalServerError,err.Error())
+		return
+	}
+	share.RespondDate(c,http.StatusOK,incomestatement)
 }

@@ -135,5 +135,7 @@ func SetupRoutes(r *gin.Engine) {
 		auth.GET(route.ViewBalancesheet, middleware.PermissionMiddleware(permission.ViewJournal), journalcontroller.GetBalanceSheet)
 
 		auth.GET(route.ViewBalancesheetperiod, middleware.PermissionMiddleware(permission.ViewJournal), journalcontroller.GetBalanceSheetForDateRange)
+
+		auth.GET(route.Incomestatment,middleware.PermissionMiddleware(permission.ViewJournal),journalcontroller.Incomestatement)
 	}
 }

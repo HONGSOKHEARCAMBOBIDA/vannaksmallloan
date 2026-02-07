@@ -68,4 +68,5 @@ const (
 
 	ViewBalancesheet       = "viewbalancesheet"
 	ViewBalancesheetperiod = "viewbalancesheetperiod"
+	Incomestatment = "incomestatement"
 )
