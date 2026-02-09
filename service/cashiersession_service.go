@@ -239,7 +239,7 @@ func (s *cashiersessionservice) GetforRollback()([]response.CashierSessionRespon
 		cs.total_receipts AS total_receipts,
 		cs.difference AS difference,
 		cs.status AS status,
-		cs.notes AS status,
+		cs.notes AS notes,
 		uv.id AS verified_by,
 		uv.name AS verified_by_name,
 		cs.verified_at AS verified_at
@@ -255,6 +255,7 @@ func (s *cashiersessionservice) GetforRollback()([]response.CashierSessionRespon
 		cashiersession[i].SessionDate = helper.FormatDate(cashiersession[i].SessionDate)
 		cashiersession[i].StartTime = helper.FormatTime(cashiersession[i].StartTime)
 		cashiersession[i].VerifiedAt = helper.FormatTime(cashiersession[i].VerifiedAt)
+		cashiersession[i].EndTime = helper.FormatTime(cashiersession[i].EndTime)
 	}
 	return  cashiersession,nil
 }

@@ -1,6 +1,7 @@
 package service
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"time"
@@ -22,6 +23,7 @@ type LoanService interface {
 	ApproveLoan(id int) error
 	DeleteLoan(id int) error
 	GetLoan(filter map[string]string, pagination request.Pagination) ([]response.LoanResponse, *model.PaginationMetadata, error)
+	DeleteLoanbeforapprove(id int) error
 }
 
 type loanservice struct {
@@ -587,3 +589,37 @@ func (s *loanservice) GetLoan(filter map[string]string, pagination request.Pagin
 		HasPrev:    pagination.Page > 1,
 	}, nil
 }
+
+func (s *loanservice) DeleteLoanbeforapprove(id int) error {
+	tx := s.db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	result := tx.
+		Where("id = ? AND status IN ?", id, []int{1, 2}).
+		Delete(&model.Loan{})
+
+	if result.Error != nil {
+		tx.Rollback()
+		return result.Error
+	}
+
+	if result.RowsAffected == 0 {
+		tx.Rollback()
+		return errors.New("loan not found or already approved")
+	}
+
+	if err := tx.Commit().Error; err != nil {
+		return err
+	}
+
+	return nil
+}
+

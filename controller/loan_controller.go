@@ -138,3 +138,17 @@ func (cr LoanController) GetLoan(c *gin.Context) {
 		"pagination": metadata,
 	})
 }
+
+func (cr LoanController) DeleteLoanbeforapprove (c *gin.Context) {
+	idParam := c.Param("id")
+	id,err := strconv.Atoi(idParam)
+	if err != nil {
+		share.RespondError(c,http.StatusNotFound,err.Error())
+		return
+	}
+	if err := cr.service.DeleteLoanbeforapprove(id); err != nil {
+		share.RespondError(c,http.StatusInternalServerError,err.Error())
+		return
+	}
+	share.ResponeSuccess(c,http.StatusOK,"delete success")
+}
