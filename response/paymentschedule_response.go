@@ -10,6 +10,7 @@ type Schedule struct {
 	PaidAmount     float64 `json:"paid_amount"`
 	Totalowe       float64 `json:"total_owe"`
 	Status         string  `json:"staus"`
+	PenaltyPaid    float64 `json:"penalty_paid"`
 }
 
 type FullPaymentResponse struct {

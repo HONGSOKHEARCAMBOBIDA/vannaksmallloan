@@ -30,7 +30,7 @@ func main() {
 	routes.SetupRoutes(r)
 
 	// Start server
-	if err := r.Run("192.168.72.204:8080"); err != nil {
+	if err := r.Run("0.0.0.0:8080"); err != nil {
 		panic(err)
 	}
 }

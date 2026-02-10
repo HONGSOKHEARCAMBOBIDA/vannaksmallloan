@@ -129,8 +129,6 @@ if result.ApproveDate != nil {
 	for i := range schedules {
 		schedules[i].PaymentDate = helper.FormatDate(schedules[i].PaymentDate)
 		
-
-
 	}
 
 	for _, ps := range schedules {
@@ -148,7 +146,8 @@ if result.ApproveDate != nil {
 			}
 
 			if paidAmount < dueAmount {
-				penaltyAmount = ps.PenaltyAmount
+		
+				penaltyAmount = ps.PenaltyAmount 
 			}
 		}
 
@@ -162,21 +161,20 @@ if result.ApproveDate != nil {
 			penaltyPaid = *ps.PenaltyPaid
 		}
 
-		totalDue := dueAmount + penaltyAmount
+		totalDue := dueAmount + penaltyAmount 
 		remainingPenalty := penaltyAmount - penaltyPaid
 
-		totalOwe := totalDue - paidAmount
-
+		totalOwe := totalDue - paidAmount 
 		// Determine status
-		status := "PENDING"
+		status := "មិនទាន់បង់"
 		if ps.PaidDate != nil {
 			if paidAmount >= totalDue {
-				status = "PAID"
+				status = "បានបង់"
 			} else if paidAmount > 0 {
 				status = "PARTIAL"
 			}
 		} else if ps.PaymentDate < time.Now().Format("2006-01-02") {
-			status = "OVERDUE"
+			status = "យឺត"
 		}
 
 		schedule := response.Schedule{
@@ -189,6 +187,7 @@ if result.ApproveDate != nil {
 			PaidAmount:     paidAmount,
 			Totalowe:       totalOwe,
 			Status:         status,
+			PenaltyPaid: penaltyPaid,
 		}
 
 		result.Schedule = append(result.Schedule, schedule)
