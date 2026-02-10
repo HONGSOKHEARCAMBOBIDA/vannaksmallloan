@@ -73,8 +73,9 @@ func (s *journalservice) processEquity(accounts []AccountBalanceResult) response
 		Title: "EQUITY",
 	}
 
+	// First, process only EQUITY accounts
 	for _, acc := range accounts {
-		if acc.AccountType == "EQUITY" || acc.AccountType == "INCOME" {
+		if acc.AccountType == "EQUITY" {
 			section.Accounts = append(section.Accounts, response.AccountBalance{
 				AccountCode: acc.AccountCode,
 				AccountName: acc.AccountName,
@@ -86,6 +87,22 @@ func (s *journalservice) processEquity(accounts []AccountBalanceResult) response
 
 	return section
 }
+
+func (s *journalservice) calculateNetIncome(accounts []AccountBalanceResult) float64 {
+	var income, expense float64
+
+	for _, acc := range accounts {
+		if acc.AccountType == "INCOME" {
+			income += acc.Balance
+		}
+		if acc.AccountType == "EXPENSE" {
+			expense += acc.Balance
+		}
+	}
+
+	return income - expense
+}
+
 
 func (s *journalservice) calculateTotals(res *response.BalanceSheetResponse) response.BalanceSheetTotals {
 	totals := response.BalanceSheetTotals{
@@ -114,15 +131,13 @@ type AccountBalanceResult struct {
 }
 
 func (s *journalservice) GenerateBalanceSheet(asOfDate string) (*response.BalanceSheetResponse, error) {
-	response := &response.BalanceSheetResponse{
+	responses := &response.BalanceSheetResponse{
 		ReportTitle: "BALANCE SHEET",
 		ReportDate:  asOfDate,
 	}
 
-	// Get account balances
 	var accountBalances []AccountBalanceResult
 
-	// Query to get all account balances
 	query := `
         SELECT 
             ca.code AS account_code,
@@ -146,19 +161,32 @@ func (s *journalservice) GenerateBalanceSheet(asOfDate string) (*response.Balanc
 		return nil, err
 	}
 
-	// Process accounts into sections
-	response.Assets = s.processAssets(accountBalances)
-	response.Liabilities = s.processLiabilities(accountBalances)
-	response.Equity = s.processEquity(accountBalances)
+	// Process main sections
+	responses.Assets = s.processAssets(accountBalances)
+	responses.Liabilities = s.processLiabilities(accountBalances)
+	responses.Equity = s.processEquity(accountBalances)
+
+	// Calculate net income
+	netIncome := s.calculateNetIncome(accountBalances)
+
+	// Add net income to equity as "Retained Earnings" (only if not zero)
+	if netIncome != 0 {
+		// If net income is positive, it's credit to equity
+		// If net income is negative, it's debit to equity
+		responses.Equity.Accounts = append(responses.Equity.Accounts, response.AccountBalance{
+			AccountCode: "",
+			AccountName: "ប្រាក់ចំណេញសរុប",
+			Balance:     netIncome,
+		})
+		responses.Equity.Total += netIncome
+	}
 
 	// Calculate totals
-	response.Totals = s.calculateTotals(response)
+	responses.Totals = s.calculateTotals(responses)
+	responses.Totals.IsBalanced = s.checkIfBalanced(responses.Totals)
 
-	// Check if balance sheet is balanced
-	response.Totals.IsBalanced = s.checkIfBalanced(response.Totals)
-	response.Message = "Balance sheet generate successfully"
-
-	return response, nil
+	responses.Message = "Balance sheet generated successfully"
+	return responses, nil
 }
 
 func (s *journalservice) Create(userID int, input request.JournalRequestCreate) error {
@@ -328,7 +356,7 @@ func (s *journalservice) Get(filters map[string]string, pagination request.Pagin
 	if err := db.Count(&totalCount).Error; err != nil {
 		return nil, nil, err
 	}
-	if err := db.Offset(offset).Limit(pagination.PageSize).Scan(&journal).Error; err != nil {
+	if err := db.Offset(offset).Limit(pagination.PageSize).Order("id DESC").Scan(&journal).Error; err != nil {
 		return nil, nil, err
 	}
 	totalPages := int(math.Ceil(float64(totalCount) / float64(pagination.PageSize)))
