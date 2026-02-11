@@ -221,7 +221,7 @@ func (s *journalservice) Create(userID int, input request.JournalRequestCreate) 
 		ReferenceCode:   journalCode,
 		CreatedBy:       userID,
 	}
-	if err := tx.Create(&[]model.Journal{debitJournal, creditJournal}).Error; err != nil {
+	if err := tx.Create(&[]model.Journal{creditJournal,debitJournal}).Error; err != nil {
 		tx.Rollback()
 		return err
 	}

@@ -80,6 +80,7 @@ func (s *authservice) Login(input request.AuthRequest) (*response.AuthResponse, 
 		ID:    user.ID,
 		Name:  user.Username,
 		Token: tokenStr,
+		RoleID: user.RoleId,
 	}
 
 	return resp, nil

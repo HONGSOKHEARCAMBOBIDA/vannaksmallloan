@@ -9,11 +9,12 @@ import (
 
 func CreateJournalPair(tx *gorm.DB, userID, referenceID int, journalCode string, chartDebit int, chartCredit int, amount float64, description string) error {
 	journals := []model.Journal{
+
 		{
 			TransactionDate: time.Now().Format("2006-01-02 15:04:05"),
-			ChartAccountID:  chartDebit,
-			DebitAmount:     amount,
-			CreditAmount:    0,
+			ChartAccountID:  chartCredit,
+			DebitAmount:     0,
+			CreditAmount:    amount,
 			Description:     description,
 			ReferenceID:     referenceID,
 			ReferenceCode:   journalCode,
@@ -21,9 +22,9 @@ func CreateJournalPair(tx *gorm.DB, userID, referenceID int, journalCode string,
 		},
 		{
 			TransactionDate: time.Now().Format("2006-01-02 15:04:05"),
-			ChartAccountID:  chartCredit,
-			DebitAmount:     0,
-			CreditAmount:    amount,
+			ChartAccountID:  chartDebit,
+			DebitAmount:     amount,
+			CreditAmount:    0,
 			Description:     description,
 			ReferenceID:     referenceID,
 			ReferenceCode:   journalCode,
