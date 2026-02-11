@@ -112,12 +112,16 @@ func (s *userservice) Update(id int, input request.UserRequestUpdate) error {
 }
 
 func (s *userservice) ChangeStatusUser(id int) error {
-	result := s.db.Model(&model.User{}).Where("id =?", id).Update("isactive", gorm.Expr("!isactive"))
-	if result.Error != nil {
-		return result.Error
+	var user model.User
+
+	if err := s.db.First(&user, id).Error; err != nil {
+		return err
 	}
-	return nil
+
+	user.Isactive = !user.Isactive
+	return s.db.Save(&user).Error
 }
+
 
 func (s *userservice) ResetPassword(id int, input request.UserRequestResetPassword) error {
 	var user model.User

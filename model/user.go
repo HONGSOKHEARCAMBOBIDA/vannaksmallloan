@@ -1,7 +1,5 @@
 package model
 
-import "time"
-
 type User struct {
 	ID        int       `json:"id"`
 	Name      string    `json:"name"`
@@ -11,5 +9,4 @@ type User struct {
 	Email     string    `json:"email"`
 	Phone     string    `json:"phone"`
 	Isactive  bool      `json:"is_active"`
-	LastLogin time.Time `json:"last_login"`
 }
