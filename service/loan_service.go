@@ -24,6 +24,7 @@ type LoanService interface {
 	DeleteLoan(id int) error
 	GetLoan(filter map[string]string, pagination request.Pagination) ([]response.LoanResponse, *model.PaginationMetadata, error)
 	DeleteLoanbeforapprove(id int) error
+	GetLateLoan(filter map[string]string,pagination request.Pagination)([]response.LoanResponse,*model.PaginationMetadata,error)
 }
 
 type loanservice struct {
@@ -621,5 +622,110 @@ func (s *loanservice) DeleteLoanbeforapprove(id int) error {
 	}
 
 	return nil
+}
+
+func (s *loanservice) GetLateLoan(filter map[string]string,pagination request.Pagination)([]response.LoanResponse,*model.PaginationMetadata,error) {
+	var loan [] response.LoanResponse
+	var totalCount int64
+	offset := (pagination.Page -1) * pagination.PageSize
+	db := s.db.Table("loans l").
+	Select(`
+		l.id AS id,
+	c.id AS client_id,
+	c.name AS client_name,
+	c.gender AS client_gender,
+	c.marital_status AS client_marital_status,
+	c.date_of_birth AS client_date_of_birth,
+	c.occupation AS client_occupation,
+	c.phone AS client_phone,
+	c.image_path AS client_image,
+	p.id AS province_id,
+	p.name AS province_name,
+	d.id AS district_id,
+	d.name AS district_name,
+	cm.id AS communce_id,
+	cm.name AS communce_name,
+	v.id AS village_id,
+	v.name AS village_name,
+
+	c.latitude AS latitude,
+	c.longitude AS longitude,
+
+	u.id AS co_id,
+	u.name AS co_name,
+
+	lp.id AS loan_product_id,
+	lp.name AS loan_product_name,
+
+	l.loan_amount AS loan_amount,
+	l.interest_rate AS interest_rate,
+	l.process_fee AS process_fee,
+	l.approve_date AS approve_date,
+	l.loan_start_date AS loan_start_date,
+	l.loan_end_date AS loan_end_date,
+	l.disbursed_date AS disbursed_date,
+
+	u.id AS disbursed_by,
+	u.name AS disburse_by_name,
+
+	l.daily_payment_amount AS daily_payment_amount,
+	l.purpose AS purpose,
+	l.duration AS duration,
+	l.status AS status,
+
+	dc.id AS document_type_id,
+	dc.name AS document_type_name,
+
+	uc.id AS check_by_id,
+	uc.name AS check_by_name,
+
+	up.id AS approve_by_id,
+	up.name AS approve_by_name,
+
+	l.closed_date AS close_date,
+	l.closed_reason AS close_reason
+	`).	
+		Joins("LEFT JOIN clients c ON c.id = l.client_id").
+		Joins("LEFT JOIN villages v ON v.id = c.village_id").
+		Joins("LEFT JOIN communces cm ON cm.id = v.communce_id").
+		Joins("LEFT JOIN districts d ON d.id = cm.district_id").
+		Joins("LEFT JOIN provinces p ON p.id = d.province_id").
+		Joins("LEFT JOIN users u ON u.id = l.co_id").
+		Joins("LEFT JOIN loan_products lp ON lp.id = l.loan_product_id").
+		Joins("LEFT JOIN document_types dc ON dc.id = l.document_type_id").
+		Joins("LEFT JOIN users uc ON uc.id = l.check_by_id").
+		Joins("LEFT JOIN users up ON up.id = l.approved_by_id").
+		Joins("LEFT JOIN payment_schedules ps ON l.id = ps.loan_id").
+Where("ps.payment_date < CURRENT_DATE AND ps.status = ?", model.PENDING).
+Group("l.id")
+
+			if v, ok := filter["name"]; ok && v != "" {
+		db = db.Where("c.name LIKE ?", "%"+v+"%")
+	}
+	if start, ok := filter["start_date"]; ok && start != "" {
+		db = db.Where("l.loan_start_date >= ?", start)
+	}
+	if err := db.Count(&totalCount).Error; err != nil {
+		return nil, nil, err
+	}
+	if err := db.Offset(offset).Limit(pagination.PageSize).Order("l.id DESC").Scan(&loan).Error; err != nil {
+		return nil, nil, err
+	}
+	totalPages := int(math.Ceil(float64(totalCount) / float64(pagination.PageSize)))
+	for i := range loan {
+		loan[i].ClientDoB = helper.FormatDate(loan[i].ClientDoB)
+		loan[i].DisbursedDate = helper.FormatDate(loan[i].DisbursedDate)
+		loan[i].ApproveDate = helper.FormatDate(loan[i].ApproveDate)
+		loan[i].LoanStartDate = helper.FormatDate(loan[i].LoanStartDate)
+		loan[i].LoanEndDate = helper.FormatDate(loan[i].LoanEndDate)
+	}
+	return loan, &model.PaginationMetadata{
+		Page:       pagination.Page,
+		PageSize:   pagination.PageSize,
+		TotalCount: int(totalCount),
+		TotalPages: totalPages,
+		HasNext:    pagination.Page < totalPages,
+		HasPrev:    pagination.Page > 1,
+	}, nil
 }
 

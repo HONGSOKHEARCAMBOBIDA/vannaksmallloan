@@ -27,6 +27,7 @@ const (
 	ViewDocumentType = "viewdocumenttype"
 
 	ViewLoan           = "viewloan"
+	ViewLateLoan	   = "viewlateloan"
 	ViewLoanforcheck   = "viewloanforcheck"
 	ViewLoanforApprove = "viewloanforapprove"
 	AddLoan            = "addloan"

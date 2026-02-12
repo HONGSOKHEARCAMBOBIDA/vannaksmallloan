@@ -80,6 +80,8 @@ func SetupRoutes(r *gin.Engine) {
 
 		auth.GET(route.ViewLoan, middleware.PermissionMiddleware(permission.ViewLoan), loancontroller.GetLoan)
 
+		auth.GET(route.ViewLateLoan,middleware.PermissionMiddleware(permission.ViewLoan),loancontroller.GetLateLoan)
+
 		auth.POST(route.AddLoan, middleware.PermissionMiddleware(permission.AddLoan), loancontroller.Create)
 
 		auth.GET(route.ViewLoanforcheck, middleware.PermissionMiddleware(permission.ViewLoan), loancontroller.GetLoanForCheck)
