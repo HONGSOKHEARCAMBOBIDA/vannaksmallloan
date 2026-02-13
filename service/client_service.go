@@ -232,13 +232,17 @@ func (s *clientservice) GetList(filters map[string]string, pagination request.Pa
 		c.id AS communce_id,
 		c.name AS communce_name,
 		v.id AS village_id,
-		v.name AS village_name
+		v.name AS village_name,
+
+		CASE WHEN l.id IS NOT NULL THEN true ELSE false END AS is_borrow,
+		IFNULL(l.loan_amount,0) AS loan_amount
 	`).
 		Joins("LEFT JOIN users u ON u.id = clients.created_by").
 		Joins("LEFT JOIN villages v ON v.id = clients.village_id").
 		Joins("LEFT JOIN communces c ON c.id = v.communce_id").
 		Joins("LEFT JOIN districts d ON d.id = c.district_id").
-		Joins("LEFT JOIN provinces p ON p.id = d.province_id")
+		Joins("LEFT JOIN provinces p ON p.id = d.province_id").
+		Joins("LEFT JOIN loans l ON l.client_id = clients.id AND l.status = 3")
 
 	if v, ok := filters["name"]; ok && v != "" {
 		db = db.Where("clients.name LIKE ?", "%"+v+"%")

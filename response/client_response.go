@@ -24,4 +24,6 @@ type ClientResponse struct {
 	CommunceName  string  `json:"communce_name"`
 	VillageID     int     `json:"village_id"`
 	VillageName   string  `json:"village_name"`
+	IsBorrow      bool    `json:"is_borrow"`
+	LoanAmount    float64 `json:"loan_amount"`
 }
